@@ -80,6 +80,7 @@ func (ur *userRepository) DeleteUserData(ctx context.Context, user *models.User)
 
 func modelUserToDBUser(u *models.User) *DBUser {
 	return &DBUser{
+		ID:        u.ID,
 		UserName:  u.UserName,
 		FirsnName: u.FirsnName,
 		LastName:  u.LastName,

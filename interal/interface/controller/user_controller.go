@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
 	"git.foxminded.com.ua/3_REST_API/interal/usecase/interactor"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
 )
 
@@ -38,10 +39,16 @@ func (uc *userController) SingUpHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	token, err := uc.userInteractor.SignUp(c.Request().Context(), &params)
+	duration, token, err := uc.userInteractor.SignUp(c.Request().Context(), &params)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	}
+
+	cookie := new(http.Cookie)
+	cookie.Name = "Authorization"
+	cookie.Value = token
+	cookie.Expires = time.Now().Add(*duration)
+	c.SetCookie(cookie)
 
 	return c.JSON(http.StatusCreated, response{Token: token, Message: "You were logged in!"})
 }

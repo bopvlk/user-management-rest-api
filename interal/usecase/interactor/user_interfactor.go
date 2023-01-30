@@ -15,7 +15,7 @@ import (
 const CtxUserKey = "user"
 
 type UserInteractor interface {
-	SignUp(ctx context.Context, user *models.User) (string, error)
+	SignUp(ctx context.Context, user *models.User) (*time.Duration, string, error)
 	SignIn(ctx context.Context, user *models.User) (string, error)
 	DeleteSigner(ctx context.Context, user *models.User) error
 	FindSignerByID(ctx context.Context, user *models.User) (*models.User, error)
@@ -48,15 +48,17 @@ func NewUserInteractor(
 	}
 }
 
-func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (string, error) {
+func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (*time.Duration, string, error) {
 	user.Password = uI.hashing(user.Password)
 
 	user, err := uI.userRepo.CreateUserData(ctx, user)
 	if err != nil {
-		return "", interal.ErrCannotCreateUser
+		return nil, "", interal.ErrCannotCreateUser
 	}
 
-	return uI.newAuthclainms(user)
+	token, err := uI.newAuthclainms(user)
+
+	return &uI.expireDuration, token, err
 }
 
 func (uI *userInteractor) SignIn(ctx context.Context, user *models.User) (string, error) {
