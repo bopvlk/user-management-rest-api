@@ -20,8 +20,7 @@ services:
         HASH_SALT: hash_salt
         SIGNING_KEY: signing_key
         TOKEN_TTL: 86400
-    # env_file:
-    #   - ../interal/config/config.env
+  
 
     command: ./bin/usermanager
 
@@ -30,8 +29,6 @@ services:
     ports:
       - '3306:3306'
     restart: always
-    # expose:
-    #   - '3306'
     environment:
         MYSQL_USER: user
         MYSQL_PASSWORD: secret
