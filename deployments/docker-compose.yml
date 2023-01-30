@@ -1,0 +1,41 @@
+version: '3.3'
+services:
+
+  usermanager_api:
+    restart: always
+    build: 
+      context: ../
+      dockerfile: ./build/package/Dockerfile
+    ports:
+      - '8080:8080'
+    depends_on:
+      - mysql
+    environment:
+        MYSQL_ROOT_USER: user
+        MYSQL_ROOT_PASSWORD: secret
+        MYSQL_DATABASE: api
+        MYSQL_USER: root
+        MYSQL_PASSWORD: secret
+        ADDR: 8080
+        HASH_SALT: 
+        SIGNING_KEY:
+        TOKEN_TTL:
+    command: ./bin/usermanager
+
+  mysql:
+    image: mysql:5.7-oracle
+    ports:
+      - '3306:3306'
+    restart: always
+    # expose:
+    #   - '3306'
+    environment:
+        MYSQL_USER: user
+        MYSQL_PASSWORD: secret
+        MYSQL_ROOT_PASSWORD: secret
+        MYSQL_DATABASE: api               
+    volumes:
+      - my-db:/var/lib/mysql
+
+volumes:
+  my-db:
