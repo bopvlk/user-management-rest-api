@@ -16,9 +16,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db := datastore.NewDB(&config)
+	db := datastore.NewDB(config)
 
-	r := registry.NewRegistry(db, &config)
+	r := registry.NewRegistry(db, config)
 
 	e := echo.New()
 	e = router.NewRouter(e, r.NewAppController())

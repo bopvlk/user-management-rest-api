@@ -20,7 +20,6 @@ type UserInteractor interface {
 	DeleteSigner(ctx context.Context, user *models.User) error
 	FindSignerByID(ctx context.Context, user *models.User) (*models.User, error)
 	FindAllSigners(ctx context.Context, users []*models.User) ([]*models.User, error)
-	// ParseSignToken(accessToken string) (*models.User, error)
 }
 
 type AuthClaims struct {

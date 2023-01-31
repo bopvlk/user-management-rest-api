@@ -13,7 +13,7 @@ type Config struct {
 	TokenTtl          int    `mapstructure:"TOKEN_TTL"`
 }
 
-func InitConfig() (config Config, err error) {
+func InitConfig() (config *Config, err error) {
 	viper.AddConfigPath("./interal/config")
 	viper.SetConfigName("config")
 	viper.AutomaticEnv()
