@@ -10,16 +10,8 @@ services:
       - '8080:8080'
     depends_on:
       - mysql
-    environment:
-        MYSQL_ROOT_USER: user
-        MYSQL_ROOT_PASSWORD: secret
-        MYSQL_DATABASE: api
-        MYSQL_USER: root
-        MYSQL_PASSWORD: secret
-        ADDR: 8080
-        HASH_SALT: hash_salt
-        SIGNING_KEY: signing_key
-        TOKEN_TTL: 86400
+    env_file:
+      - ../interal/config/config.env
   
 
     command: ./bin/usermanager
@@ -29,11 +21,8 @@ services:
     ports:
       - '3306:3306'
     restart: always
-    environment:
-        MYSQL_USER: user
-        MYSQL_PASSWORD: secret
-        MYSQL_ROOT_PASSWORD: secret
-        MYSQL_DATABASE: api               
+    env_file:
+      - ../interal/config/config.env
     volumes:
       - my-db:/var/lib/mysql
 

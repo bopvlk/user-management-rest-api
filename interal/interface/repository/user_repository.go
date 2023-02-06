@@ -28,7 +28,7 @@ func NewUserRepository(db *gorm.DB) repository.UserRepository {
 	return &userRepository{db}
 }
 
-func (ur *userRepository) FindAllUsersData(ctx context.Context, users []*models.User) ([]*models.User, error) {
+func (ur *userRepository) FindAllUsers(ctx context.Context, users []*models.User) ([]*models.User, error) {
 	dbuser := make([]*DBUser, len(users))
 	for i := 0; i < len(users); i++ {
 		dbuser[i] = modelUserToDBUser(users[i])
@@ -47,7 +47,7 @@ func (ur *userRepository) FindAllUsersData(ctx context.Context, users []*models.
 	return users, nil
 }
 
-func (ur *userRepository) FindOneUserData(ctx context.Context, user *models.User) (*models.User, error) {
+func (ur *userRepository) FindOneUser(ctx context.Context, user *models.User) (*models.User, error) {
 	dbuser := modelUserToDBUser(user)
 
 	if err := ur.db.WithContext(ctx).Where(&dbuser).First(&dbuser).Error; err != nil {
@@ -59,7 +59,7 @@ func (ur *userRepository) FindOneUserData(ctx context.Context, user *models.User
 	return user, nil
 }
 
-func (ur *userRepository) CreateUserData(ctx context.Context, user *models.User) (*models.User, error) {
+func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
 	dbuser := modelUserToDBUser(user)
 
 	if err := ur.db.WithContext(ctx).Create(&dbuser).Error; err != nil {
@@ -69,7 +69,7 @@ func (ur *userRepository) CreateUserData(ctx context.Context, user *models.User)
 	return user, nil
 }
 
-func (ur *userRepository) DeleteUserData(ctx context.Context, user *models.User) error {
+func (ur *userRepository) DeleteUser(ctx context.Context, user *models.User) error {
 	dbuser := modelUserToDBUser(user)
 
 	if err := ur.db.WithContext(ctx).Delete(&dbuser).Error; err != nil {

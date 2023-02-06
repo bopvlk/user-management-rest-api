@@ -23,6 +23,6 @@ func main() {
 	e := echo.New()
 	e = router.NewRouter(e, r.NewAppController())
 
-	log.Println("Server listen at http://localhost" + ":" + config.Addr)
-	log.Fatalln(e.Start(":" + config.Addr))
+	log.Println("Server listen at http://localhost" + ":" + config.Port)
+	log.Fatalln(e.Start(":" + config.Port))
 }

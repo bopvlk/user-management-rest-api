@@ -7,8 +7,8 @@ import (
 )
 
 type UserRepository interface {
-	CreateUserData(ctx context.Context, user *models.User) (*models.User, error)
-	FindAllUsersData(ctx context.Context, users []*models.User) ([]*models.User, error)
-	FindOneUserData(ctx context.Context, user *models.User) (*models.User, error)
-	DeleteUserData(ctx context.Context, user *models.User) error
+	CreateUser(ctx context.Context, user *models.User) (*models.User, error)
+	FindAllUsers(ctx context.Context, users []*models.User) ([]*models.User, error)
+	FindOneUser(ctx context.Context, user *models.User) (*models.User, error)
+	DeleteUser(ctx context.Context, user *models.User) error
 }
