@@ -12,8 +12,6 @@ services:
       - mysql
     env_file:
       - ../interal/config/config.env
-  
-
     command: ./bin/usermanager
 
   mysql:

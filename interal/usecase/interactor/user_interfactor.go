@@ -8,7 +8,7 @@ import (
 
 	"git.foxminded.com.ua/3_REST_API/interal"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
-	"git.foxminded.com.ua/3_REST_API/interal/usecase/repository"
+	"git.foxminded.com.ua/3_REST_API/interal/interface/repository"
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -18,8 +18,8 @@ type UserInteractor interface {
 	SignUp(ctx context.Context, user *models.User) (*time.Duration, string, error)
 	SignIn(ctx context.Context, user *models.User) (*time.Duration, string, error)
 	DeleteSigner(ctx context.Context, user *models.User) error
-	FindSignerByID(ctx context.Context, user *models.User) (*models.User, error)
-	FindAllSigners(ctx context.Context, users []*models.User) ([]*models.User, error)
+	FindOneSigner(ctx context.Context, user *models.User) (*models.User, error)
+	FindSigners(ctx context.Context, page int, users []*models.User) ([]*models.User, error)
 }
 
 type AuthClaims struct {
@@ -81,7 +81,7 @@ func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) e
 	return nil
 }
 
-func (uI *userInteractor) FindSignerByID(ctx context.Context, user *models.User) (*models.User, error) {
+func (uI *userInteractor) FindOneSigner(ctx context.Context, user *models.User) (*models.User, error) {
 	user, err := uI.userRepo.FindOneUser(ctx, user)
 	if err != nil {
 		return nil, err
@@ -89,8 +89,9 @@ func (uI *userInteractor) FindSignerByID(ctx context.Context, user *models.User)
 	return user, err
 }
 
-func (uI *userInteractor) FindAllSigners(ctx context.Context, users []*models.User) ([]*models.User, error) {
-	user, err := uI.userRepo.FindAllUsers(ctx, users)
+func (uI *userInteractor) FindSigners(ctx context.Context, page int, users []*models.User) ([]*models.User, error) {
+
+	user, err := uI.userRepo.FindUsers(ctx, page, users)
 	if err != nil {
 		return nil, err
 	}

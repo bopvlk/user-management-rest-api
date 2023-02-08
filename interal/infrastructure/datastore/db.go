@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"git.foxminded.com.ua/3_REST_API/interal/config"
-	"git.foxminded.com.ua/3_REST_API/interal/interface/repository"
+	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -20,7 +20,7 @@ func NewDB(c *config.Config) *gorm.DB {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	db.AutoMigrate(&repository.DBUser{})
+	db.AutoMigrate(&models.User{})
 
 	return db
 }
