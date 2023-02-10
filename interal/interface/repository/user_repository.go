@@ -30,8 +30,9 @@ func (ur *userRepository) FindUsers(ctx context.Context, page int, users []*mode
 	return users, nil
 }
 
-func (ur *userRepository) FindOneUser(ctx context.Context, user *models.User) (*models.User, error) {
-	if err := ur.db.WithContext(ctx).Where(&user).First(&user).Error; err != nil {
+func (ur *userRepository) FindOneUser(ctx context.Context, id string) (*models.User, error) {
+	user := new(models.User)
+	if err := ur.db.WithContext(ctx).Where("id =?", id).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return user, nil

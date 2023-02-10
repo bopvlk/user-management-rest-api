@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"git.foxminded.com.ua/3_REST_API/config"
+	"git.foxminded.com.ua/3_REST_API/interal/config"
 	"git.foxminded.com.ua/3_REST_API/interal/interface/controller"
 	"gorm.io/gorm"
 )

@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"git.foxminded.com.ua/3_REST_API/config"
+	"git.foxminded.com.ua/3_REST_API/interal/config"
 	"git.foxminded.com.ua/3_REST_API/interal/infrastructure/datastore"
 	"git.foxminded.com.ua/3_REST_API/interal/infrastructure/router"
 	"git.foxminded.com.ua/3_REST_API/interal/registry"
