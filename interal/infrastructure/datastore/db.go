@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"git.foxminded.com.ua/3_REST_API/interal/config"
+	"git.foxminded.com.ua/3_REST_API/config"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
