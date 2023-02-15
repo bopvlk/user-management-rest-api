@@ -7,6 +7,7 @@ import (
 
 	"git.foxminded.com.ua/3_REST_API/interal/domain/mappers"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
+	"git.foxminded.com.ua/3_REST_API/interal/domain/requests"
 	"git.foxminded.com.ua/3_REST_API/interal/usecase/interactor"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -29,35 +30,35 @@ func NewUserController(us interactor.UserInteractor) UserController {
 }
 
 func (uc *userController) SignUpHandler(c echo.Context) error {
-	var params mappers.SignUpRequest
+	var params requests.SignUpRequest
 	if err := c.Bind(&params); err != nil {
 		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, mappers.SignUpInResponse{Message: "We got some problem with request param", IsError: true})
+		return echo.NewHTTPError(http.StatusBadRequest, requests.SignUpInResponse{Message: "We got some problem with request param", IsError: true})
 	}
 
 	duration, token, err := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUserModel(&params))
 	if err != nil {
 		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusConflict, mappers.SignUpInResponse{Message: "change username and try again", IsError: true})
+		return echo.NewHTTPError(http.StatusConflict, requests.SignUpInResponse{Message: "change username and try again", IsError: true})
 	}
 
 	saveAuthcookie(c, token, int(duration.Seconds()))
 
-	return c.JSON(http.StatusCreated, mappers.SignUpInResponse{Token: token, Message: "You were logged in!"})
+	return c.JSON(http.StatusCreated, requests.SignUpInResponse{Token: token, Message: "You were logged in!"})
 }
 
 func (uc *userController) SignInHandler(c echo.Context) error {
-	var params mappers.SignInRequest
-	if err := c.Bind(&params); err != nil {
+	var signInRequest requests.SignInRequest
+	if err := c.Bind(&signInRequest); err != nil {
 		c.Logger().Error("problem param", err)
 		return echo.NewHTTPError(http.StatusBadRequest, "We got some problem with request param.")
 	}
 
-	if params.Password == "" || params.UserName == "" {
+	if signInRequest.Password == "" || signInRequest.UserName == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "We got some problem with request param. ")
 	}
 
-	duration, token, err := uc.userInteractor.SignIn(c.Request().Context(), mappers.MapSignInRequestToUserModel(&params))
+	duration, token, err := uc.userInteractor.SignIn(c.Request().Context(), signInRequest.UserName, signInRequest.Password)
 	if err != nil {
 		c.Logger().Error(err)
 		return echo.NewHTTPError(http.StatusNotFound, "Please check out username and pasword, and try again")
@@ -65,29 +66,29 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 
 	saveAuthcookie(c, token, int(duration.Seconds()))
 
-	return c.JSON(http.StatusOK, mappers.SignUpInResponse{Token: token, Message: "You were logged in!"})
+	return c.JSON(http.StatusOK, requests.SignUpInResponse{Token: token, Message: "You were logged in!"})
 }
 
 func (uc *userController) GetOneUserHandler(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusBadRequest, mappers.GetOneUserResponse{
+		return echo.NewHTTPError(http.StatusBadRequest, requests.GetOneUserResponse{
 			Message: "Please enter the correct ID",
 			IsError: true,
 		})
 	}
-	user := &models.User{ID: uint(id)}
-	user, err = uc.userInteractor.FindOneSigner(c.Request().Context(), user)
+
+	user, err := uc.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
 	if err != nil {
 		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusNotFound, mappers.GetOneUserResponse{
+		return echo.NewHTTPError(http.StatusNotFound, requests.GetOneUserResponse{
 			Message: "some problem with request",
 			IsError: true,
 		})
 	}
 
-	return c.JSON(http.StatusOK, mappers.GetOneUserResponse{
+	return c.JSON(http.StatusOK, requests.GetOneUserResponse{
 		Message:      fmt.Sprintf("There is user with ID %v", id),
 		UserResponse: *mappers.MapUserModelToUserResponse(user),
 		IsError:      false,
@@ -95,21 +96,34 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 }
 
 func (uc *userController) GetUsersHandler(c echo.Context) error {
-
-	page, err := strconv.Atoi(c.Param("page"))
-
 	name := getUserClaims(c).User.UserName
+	pagination := generatePaginationRequest(c)
 
-	var users []*models.User
-	users, err = uc.userInteractor.FindSigners(c.Request().Context(), page, users)
+	pagination, users, err := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
 	if err != nil {
 		c.Logger().Error(err)
 		return echo.NewHTTPError(http.StatusNotFound, "some problem with request handling")
 	}
 
-	return c.JSON(http.StatusOK, mappers.GetUsersResponse{
+	pagination.Rows = mappers.MapUsersModelToUsersResponse(users)
+
+	urlPath := c.Request().URL.Path
+
+	pagination.FirstPage = fmt.Sprintf("%s?limit=%d&page=%d&sort=%s", urlPath, pagination.Limit, 1, pagination.Sort)
+	pagination.LastPage = fmt.Sprintf("%s?limit=%d&page=%d&sort=%s", urlPath, pagination.Limit, pagination.TotalPages, pagination.Sort)
+
+	if pagination.Page > 1 {
+		pagination.PreviousPage = fmt.Sprintf("%s?limit=%d&page=%d&sort=%s", urlPath, pagination.Limit, pagination.Page-1, pagination.Sort)
+	}
+
+	if pagination.Page < pagination.TotalPages {
+		// set next page pagination response
+		pagination.NextPage = fmt.Sprintf("%s?limit=%d&page=%d&sort=%s", urlPath, pagination.Limit, pagination.Page+1, pagination.Sort)
+	}
+
+	return c.JSON(http.StatusOK, requests.GetUsersResponse{
 		Message:       fmt.Sprintf("Hello,%v U are in restricted zone", name),
-		UsersResponse: mappers.MapUsersModelToUsersResponse(users),
+		UsersResponse: pagination,
 		IsError:       false,
 	})
 }
@@ -142,4 +156,30 @@ func saveAuthcookie(c echo.Context, token string, duration int) {
 	cookie.Value = token
 	cookie.MaxAge = duration
 	c.SetCookie(cookie)
+}
+
+func generatePaginationRequest(c echo.Context) *models.Pagination {
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		c.Logger().Error(err)
+		limit = 5
+	} else if limit < 5 {
+		limit = 5
+	}
+
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil {
+		if err != nil {
+			c.Logger().Error(err)
+			page = 1
+		} else if page < 1 {
+			page = 1
+		}
+	}
+	sort := c.QueryParam("sort")
+	if sort == "" {
+		sort = "id desc"
+	}
+
+	return &models.Pagination{Limit: limit, Page: page, Sort: sort}
 }

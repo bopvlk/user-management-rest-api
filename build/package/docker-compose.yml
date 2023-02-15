@@ -4,14 +4,14 @@ services:
   usermanager_api:
     restart: always
     build: 
-      context: ../
+      context: ../../
       dockerfile: ./build/package/Dockerfile
     ports:
       - '8080:8080'
     depends_on:
       - mysql
     env_file:
-      - ../interal/config/config.env
+      - ../../config/config.env
     command: ./bin/usermanager
 
   mysql:
@@ -20,7 +20,7 @@ services:
       - '3306:3306'
     restart: always
     env_file:
-      - ../interal/config/config.env
+      - ./config.env
     volumes:
       - my-db:/var/lib/mysql
 

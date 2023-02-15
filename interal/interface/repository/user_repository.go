@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"math"
 
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
 	"gorm.io/gorm"
@@ -9,8 +10,9 @@ import (
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *models.User) (*models.User, error)
-	FindUsers(ctx context.Context, page int, users []*models.User) ([]*models.User, error)
-	FindOneUser(ctx context.Context, user *models.User) (*models.User, error)
+	FindUsers(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error)
+	FindOneUserByID(ctx context.Context, id uint) (*models.User, error)
+	FindOneUserByUserNameAndPassword(ctx context.Context, username, password string) (*models.User, error)
 	DeleteUser(ctx context.Context, user *models.User) error
 }
 
@@ -22,20 +24,37 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{db}
 }
 
-func (ur *userRepository) FindUsers(ctx context.Context, page int, users []*models.User) ([]*models.User, error) {
-	err := ur.db.WithContext(ctx).Limit(5).Offset((page - 1) * 5).Find(&users).Error
-	if err != nil {
-		return nil, err
+func (ur *userRepository) FindUsers(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error) {
+	var users []*models.User
+
+	var offset int = (pagination.Page - 1) * pagination.Limit
+
+	if err := ur.db.WithContext(ctx).Limit(pagination.Limit).Offset(offset).Order(pagination.Sort).Find(&users).Error; err != nil {
+		return nil, nil, err
 	}
-	return users, nil
+
+	if err := ur.db.Model(&models.User{}).Count(&pagination.TotalRows).Error; err != nil {
+		return nil, nil, err
+	}
+
+	pagination.TotalPages = int(math.Ceil(float64(pagination.TotalRows) / float64(pagination.Limit)))
+	return pagination, users, nil
 }
 
-func (ur *userRepository) FindOneUser(ctx context.Context, id string) (*models.User, error) {
-	user := new(models.User)
-	if err := ur.db.WithContext(ctx).Where("id =?", id).First(&user).Error; err != nil {
+func (ur *userRepository) FindOneUserByID(ctx context.Context, id uint) (*models.User, error) {
+	user := models.User{}
+	if err := ur.db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil {
 		return nil, err
 	}
-	return user, nil
+	return &user, nil
+}
+
+func (ur *userRepository) FindOneUserByUserNameAndPassword(ctx context.Context, username, password string) (*models.User, error) {
+	user := models.User{}
+	if err := ur.db.WithContext(ctx).Where("username = ?", username).Where("password = ?", password).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {

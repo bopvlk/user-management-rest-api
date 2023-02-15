@@ -27,7 +27,7 @@ func NewRouter(e *echo.Echo, appController *controller.AppController) *echo.Echo
 		SigningKey:  []byte(viper.GetString("SIGNING_KEY")),
 		TokenLookup: "cookie:Authorization",
 	}))
-	restrictedGroup.GET("/users/:page", func(c echo.Context) error { return appController.GetUsersHandler(c) })
+	restrictedGroup.GET("/users", func(c echo.Context) error { return appController.GetUsersHandler(c) })
 	restrictedGroup.DELETE("/users", func(c echo.Context) error { return appController.DeleteUserHandler(c) })
 	return e
 }

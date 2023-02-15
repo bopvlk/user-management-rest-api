@@ -1,6 +1,9 @@
 package config
 
-import "github.com/spf13/viper"
+import (
+	"git.foxminded.com.ua/3_REST_API/interal/apperrors"
+	"github.com/spf13/viper"
+)
 
 type Config struct {
 	DBUser     string `mapstructure:"DB_USER"`
@@ -13,14 +16,16 @@ type Config struct {
 }
 
 func InitConfig() (config *Config, err error) {
-	viper.AddConfigPath("./interal/config")
+	viper.AddConfigPath("./config")
+	viper.AddConfigPath("./build/package/config")
 	viper.SetConfigName("config")
 	viper.AutomaticEnv()
 
 	if err = viper.ReadInConfig(); err != nil {
-		return
+		return nil, apperrors.ConfigReadErr.AppendMessage(err)
 	}
-
-	err = viper.Unmarshal(&config)
+	if err = viper.Unmarshal(&config); err != nil {
+		return nil, apperrors.ConfigUnmarshallErr.AppendMessage(err)
+	}
 	return
 }

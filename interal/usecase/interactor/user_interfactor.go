@@ -16,10 +16,10 @@ const CtxUserKey = "user"
 
 type UserInteractor interface {
 	SignUp(ctx context.Context, user *models.User) (*time.Duration, string, error)
-	SignIn(ctx context.Context, user *models.User) (*time.Duration, string, error)
+	SignIn(ctx context.Context, name, password string) (*time.Duration, string, error)
 	DeleteSigner(ctx context.Context, user *models.User) error
-	FindOneSigner(ctx context.Context, user *models.User) (*models.User, error)
-	FindSigners(ctx context.Context, page int, users []*models.User) ([]*models.User, error)
+	FindOneSigner(ctx context.Context, id uint) (*models.User, error)
+	FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error)
 }
 
 type AuthClaims struct {
@@ -60,10 +60,10 @@ func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (*time.
 	return &uI.expireDuration, token, err
 }
 
-func (uI *userInteractor) SignIn(ctx context.Context, user *models.User) (*time.Duration, string, error) {
-	user.Password = uI.hashing(user.Password)
+func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (*time.Duration, string, error) {
+	password = uI.hashing(password)
 
-	user, err := uI.userRepo.FindOneUser(ctx, user)
+	user, err := uI.userRepo.FindOneUserByUserNameAndPassword(ctx, name, password)
 	if err != nil {
 		return nil, "", interal.ErrUserNotFound
 	}
@@ -81,21 +81,21 @@ func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) e
 	return nil
 }
 
-func (uI *userInteractor) FindOneSigner(ctx context.Context, user *models.User) (*models.User, error) {
-	user, err := uI.userRepo.FindOneUser(ctx, user)
+func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.User, error) {
+	user, err := uI.userRepo.FindOneUserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	return user, err
 }
 
-func (uI *userInteractor) FindSigners(ctx context.Context, page int, users []*models.User) ([]*models.User, error) {
+func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error) {
 
-	user, err := uI.userRepo.FindUsers(ctx, page, users)
+	pagination, users, err := uI.userRepo.FindUsers(ctx, pagination)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return user, err
+	return pagination, users, err
 }
 
 func (uI *userInteractor) hashing(password string) string {
