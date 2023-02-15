@@ -5,15 +5,15 @@ import (
 	"git.foxminded.com.ua/3_REST_API/interal/domain/requests"
 )
 
-func MapUsersModelToUsersResponse(u []*models.User) []*requests.UserResponse {
+func MapUsersToUsersResponse(u []*models.User) []*requests.UserResponse {
 	ur := make([]*requests.UserResponse, len(u))
 	for i := 0; i < len(u); i++ {
-		ur[i] = MapUserModelToUserResponse(u[i])
+		ur[i] = MapUserToUserResponse(u[i])
 	}
 	return ur
 }
 
-func MapUserModelToUserResponse(u *models.User) *requests.UserResponse {
+func MapUserToUserResponse(u *models.User) *requests.UserResponse {
 	return &requests.UserResponse{
 		ID:        u.ID,
 		UserName:  u.UserName,
@@ -25,7 +25,7 @@ func MapUserModelToUserResponse(u *models.User) *requests.UserResponse {
 	}
 }
 
-func MapSignUpRequestToUserModel(signUp *requests.SignUpRequest) *models.User {
+func MapSignUpRequestToUser(signUp *requests.SignUpRequest) *models.User {
 	return &models.User{
 		UserName:  signUp.UserName,
 		FirstName: signUp.FirstName,
@@ -35,7 +35,7 @@ func MapSignUpRequestToUserModel(signUp *requests.SignUpRequest) *models.User {
 
 }
 
-func MapSignInRequestToUserModel(signIp *requests.SignInRequest) *models.User {
+func MapSignInRequestToUser(signIp *requests.SignInRequest) *models.User {
 	return &models.User{
 		UserName: signIp.UserName,
 		Password: signIp.Password,

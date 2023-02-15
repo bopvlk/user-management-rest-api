@@ -30,13 +30,13 @@ func NewUserController(us interactor.UserInteractor) UserController {
 }
 
 func (uc *userController) SignUpHandler(c echo.Context) error {
-	var params requests.SignUpRequest
-	if err := c.Bind(&params); err != nil {
+	var signUpRequest requests.SignUpRequest
+	if err := c.Bind(&signUpRequest); err != nil {
 		c.Logger().Error(err)
 		return echo.NewHTTPError(http.StatusBadRequest, requests.SignUpInResponse{Message: "We got some problem with request param", IsError: true})
 	}
 
-	duration, token, err := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUserModel(&params))
+	duration, token, err := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
 	if err != nil {
 		c.Logger().Error(err)
 		return echo.NewHTTPError(http.StatusConflict, requests.SignUpInResponse{Message: "change username and try again", IsError: true})
@@ -90,7 +90,7 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, requests.GetOneUserResponse{
 		Message:      fmt.Sprintf("There is user with ID %v", id),
-		UserResponse: *mappers.MapUserModelToUserResponse(user),
+		UserResponse: *mappers.MapUserToUserResponse(user),
 		IsError:      false,
 	})
 }
@@ -105,7 +105,7 @@ func (uc *userController) GetUsersHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "some problem with request handling")
 	}
 
-	pagination.Rows = mappers.MapUsersModelToUsersResponse(users)
+	pagination.Rows = mappers.MapUsersToUsersResponse(users)
 
 	urlPath := c.Request().URL.Path
 
@@ -117,7 +117,6 @@ func (uc *userController) GetUsersHandler(c echo.Context) error {
 	}
 
 	if pagination.Page < pagination.TotalPages {
-		// set next page pagination response
 		pagination.NextPage = fmt.Sprintf("%s?limit=%d&page=%d&sort=%s", urlPath, pagination.Limit, pagination.Page+1, pagination.Sort)
 	}
 

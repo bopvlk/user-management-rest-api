@@ -24,6 +24,7 @@ func InitConfig() (config *Config, err error) {
 	if err = viper.ReadInConfig(); err != nil {
 		return nil, apperrors.ConfigReadErr.AppendMessage(err)
 	}
+
 	if err = viper.Unmarshal(&config); err != nil {
 		return nil, apperrors.ConfigUnmarshallErr.AppendMessage(err)
 	}
