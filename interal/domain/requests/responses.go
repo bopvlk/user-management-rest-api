@@ -15,7 +15,6 @@ type SignUpInResponse struct {
 type GetUsersResponse struct {
 	Message       string             `json:"message"`
 	UsersResponse *models.Pagination `json:"users"`
-	IsError       bool               `json:"is_error"`
 }
 
 type UserResponse struct {
@@ -32,4 +31,9 @@ type GetOneUserResponse struct {
 	Message      string       `json:"message"`
 	UserResponse UserResponse `json:"user"`
 	IsError      bool         `json:"is_error"`
+}
+
+type ErrorResponse struct {
+	Message  string `json:"message"`
+	HTTPCode int    `json:"err_code"`
 }

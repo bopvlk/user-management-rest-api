@@ -12,14 +12,16 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+//go:generate mockgen -source=user_interfactor.go -destination=moks/mock.go
+
 const CtxUserKey = "user"
 
 type UserInteractor interface {
-	SignUp(ctx context.Context, user *models.User) (*time.Duration, string, error)
-	SignIn(ctx context.Context, name, password string) (*time.Duration, string, error)
-	DeleteSigner(ctx context.Context, user *models.User) error
-	FindOneSigner(ctx context.Context, id uint) (*models.User, error)
-	FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error)
+	SignUp(ctx context.Context, user *models.User) (*time.Duration, string, *apperrors.AppError)
+	SignIn(ctx context.Context, name, password string) (*time.Duration, string, *apperrors.AppError)
+	DeleteSigner(ctx context.Context, user *models.User) *apperrors.AppError
+	FindOneSigner(ctx context.Context, id uint) (*models.User, *apperrors.AppError)
+	FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, *apperrors.AppError)
 }
 
 type AuthClaims struct {
@@ -47,7 +49,7 @@ func NewUserInteractor(
 	}
 }
 
-func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (*time.Duration, string, error) {
+func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (*time.Duration, string, *apperrors.AppError) {
 	var err error
 	user.Password, err = uI.hashing(user.Password)
 	if err != nil {
@@ -67,7 +69,7 @@ func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (*time.
 	return &uI.expireDuration, token, nil
 }
 
-func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (*time.Duration, string, error) {
+func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (*time.Duration, string, *apperrors.AppError) {
 	password, err := uI.hashing(password)
 	if err != nil {
 		return nil, "", apperrors.HashingPasswordErr.AppendMessage(err)
@@ -86,7 +88,7 @@ func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (*t
 	return &uI.expireDuration, token, nil
 }
 
-func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) error {
+func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) *apperrors.AppError {
 
 	if err := uI.userRepo.DeleteUser(ctx, user); err != nil {
 		return apperrors.CanNotDeleteUserErr.AppendMessage(err)
@@ -94,7 +96,7 @@ func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) e
 	return nil
 }
 
-func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.User, error) {
+func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.User, *apperrors.AppError) {
 	user, err := uI.userRepo.FindOneUserByID(ctx, id)
 	if err != nil {
 		return nil, apperrors.UserNotFoundErr.AppendMessage(err)
@@ -102,7 +104,7 @@ func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.U
 	return user, nil
 }
 
-func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error) {
+func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, *apperrors.AppError) {
 
 	pagination, users, err := uI.userRepo.FindUsers(ctx, pagination)
 	if err != nil {

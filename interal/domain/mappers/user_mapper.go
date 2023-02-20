@@ -1,6 +1,7 @@
 package mappers
 
 import (
+	"git.foxminded.com.ua/3_REST_API/interal/apperrors"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/requests"
 )
@@ -41,4 +42,11 @@ func MapSignInRequestToUser(signIp *requests.SignInRequest) *models.User {
 		Password: signIp.Password,
 	}
 
+}
+
+func MapAppErrorToErrorResponse(appErr *apperrors.AppError) *requests.ErrorResponse {
+	return &requests.ErrorResponse{
+		Message:  appErr.Message,
+		HTTPCode: appErr.HTTPCode,
+	}
 }

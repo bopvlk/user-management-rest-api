@@ -55,9 +55,33 @@ var (
 	}
 
 	PaginationErr = AppError{
-		Message:  "it is pagination problem",
+		Message:  "there is pagination problem",
 		Code:     "PAGINATION_ERR",
 		HTTPCode: http.StatusInternalServerError,
+	}
+
+	CanNotInitializeDBSessionErr = AppError{
+		Message:  "can't initialize db session",
+		Code:     "DB_SESSION_INIT_ERR",
+		HTTPCode: http.StatusInternalServerError,
+	}
+
+	ValidatorErr = AppError{
+		Message:  "validation cannot be passed",
+		Code:     "VALIDATOR_ERR",
+		HTTPCode: http.StatusBadRequest,
+	}
+
+	ValidatorInitializeErr = AppError{
+		Message:  "can't initialize validation",
+		Code:     "VALIDATOR_INIT_ERR",
+		HTTPCode: http.StatusInternalServerError,
+	}
+
+	CanNotBindErr = AppError{
+		Message:  "couldn't bind some data",
+		Code:     "BINDING_ERR",
+		HTTPCode: http.StatusBadRequest,
 	}
 )
 

@@ -9,6 +9,7 @@ type Config struct {
 	DBUser     string `mapstructure:"DB_USER"`
 	DBPassword string `mapstructure:"DB_PASSWORD"`
 	DBName     string `mapstructure:"DB_NAME"`
+	DBHost     string `mapstructure:"DB_HOST"`
 	Port       string `mapstructure:"PORT"`
 	HashSalt   string `mapstructure:"HASH_SALT"`
 	SigningKey string `mapstructure:"SIGNING_KEY"`

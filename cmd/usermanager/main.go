@@ -16,12 +16,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db := datastore.NewDB(config)
+	db, err := datastore.NewDB(config)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	r := registry.NewRegistry(db, config)
 
 	e := echo.New()
-	e = router.NewRouter(e, r.NewAppController())
+	e = router.NewRouter(e, config, r.NewAppController())
 
 	log.Println("Server listen at http://localhost" + ":" + config.Port)
 	log.Fatalln(e.Start(":" + config.Port))
