@@ -91,7 +91,8 @@ func (appError *AppError) Error() string {
 
 func (appError *AppError) AppendMessage(anyErrs ...interface{}) *AppError {
 	return &AppError{
-		Message: fmt.Sprintf("%v : %v", appError.Message, anyErrs),
-		Code:    appError.Code,
+		Message:  fmt.Sprintf("%v : %v", appError.Message, anyErrs),
+		Code:     appError.Code,
+		HTTPCode: appError.HTTPCode,
 	}
 }

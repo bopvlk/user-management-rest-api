@@ -7,9 +7,8 @@ import (
 )
 
 type SignUpInResponse struct {
-	Message string `json:"message"`
 	Token   string `json:"token"`
-	IsError bool   `json:"is_error"`
+	Message string `json:"message"`
 }
 
 type GetUsersResponse struct {

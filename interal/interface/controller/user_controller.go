@@ -36,26 +36,26 @@ func (uc *userController) SignUpHandler(c echo.Context) error {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
 	if err := c.Validate(signUpRequest); err != nil {
 		appErr := apperrors.ValidatorErr.AppendMessage(err)
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
 	duration, token, appErr := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
 	if appErr != nil {
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
-	saveAuthcookie(c, token, int(duration.Seconds()))
+	saveAuthcookie(c, token, duration)
 
-	return c.JSON(http.StatusCreated, requests.SignUpInResponse{Token: token, Message: "You were logged in!"})
+	return c.JSON(http.StatusCreated, requests.SignUpInResponse{Token: token, Message: "You are logged in!"})
 }
 
 func (uc *userController) SignInHandler(c echo.Context) error {
@@ -64,14 +64,14 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
 	if err := c.Validate(signInRequest); err != nil {
 		appErr := apperrors.ValidatorErr.AppendMessage(err)
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
 	if signInRequest.Password == "" || signInRequest.UserName == "" {
@@ -84,7 +84,7 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Please check out username and pasword, and try again")
 	}
 
-	saveAuthcookie(c, token, int(duration.Seconds()))
+	saveAuthcookie(c, token, duration)
 
 	return c.JSON(http.StatusOK, requests.SignUpInResponse{Token: token, Message: "You were logged in!"})
 }
@@ -95,14 +95,14 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
 	user, appErr := uc.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
 	if appErr != nil {
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
 	return c.JSON(http.StatusOK, requests.GetOneUserResponse{
@@ -118,14 +118,14 @@ func (uc *userController) GetUsersHandler(c echo.Context) error {
 	if appErr != nil {
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
 	pagination, users, appErr := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
 	if appErr != nil {
 		c.Logger().Error(appErr.Code)
 		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse.Message)
+		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
 	pagination.Rows = mappers.MapUsersToUsersResponse(users)

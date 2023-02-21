@@ -17,8 +17,8 @@ import (
 const CtxUserKey = "user"
 
 type UserInteractor interface {
-	SignUp(ctx context.Context, user *models.User) (*time.Duration, string, *apperrors.AppError)
-	SignIn(ctx context.Context, name, password string) (*time.Duration, string, *apperrors.AppError)
+	SignUp(ctx context.Context, user *models.User) (int, string, *apperrors.AppError)
+	SignIn(ctx context.Context, name, password string) (int, string, *apperrors.AppError)
 	DeleteSigner(ctx context.Context, user *models.User) *apperrors.AppError
 	FindOneSigner(ctx context.Context, id uint) (*models.User, *apperrors.AppError)
 	FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, *apperrors.AppError)
@@ -33,59 +33,55 @@ type userInteractor struct {
 	userRepo       repository.UserRepository
 	hashSalt       string
 	signingKey     []byte
-	expireDuration time.Duration
+	expireDuration int
 }
 
-func NewUserInteractor(
-	userRepo repository.UserRepository,
-	hashSalt string,
-	signingKey []byte,
-	tokenTTL time.Duration) *userInteractor {
+func NewUserInteractor(userRepo repository.UserRepository, hashSalt string, signingKey []byte, tokenTTL int) *userInteractor {
 	return &userInteractor{
 		userRepo:       userRepo,
 		hashSalt:       hashSalt,
 		signingKey:     signingKey,
-		expireDuration: time.Second * tokenTTL,
+		expireDuration: tokenTTL,
 	}
 }
 
-func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (*time.Duration, string, *apperrors.AppError) {
+func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (int, string, *apperrors.AppError) {
 	var err error
 	user.Password, err = uI.hashing(user.Password)
 	if err != nil {
-		return nil, "", apperrors.HashingPasswordErr.AppendMessage(err)
+		return 0, "", apperrors.HashingPasswordErr.AppendMessage(err)
 	}
 
 	user, err = uI.userRepo.CreateUser(ctx, user)
 	if err != nil {
-		return nil, "", apperrors.CanNotCreateUserErr.AppendMessage(err)
+		return 0, "", apperrors.CanNotCreateUserErr.AppendMessage(err)
 	}
 
 	token, err := uI.makeSignedToken(user)
 	if err != nil {
-		return nil, "", apperrors.CanNotCreateTokenErr.AppendMessage(err)
+		return 0, "", apperrors.CanNotCreateTokenErr.AppendMessage(err)
 	}
 
-	return &uI.expireDuration, token, nil
+	return uI.expireDuration, token, nil
 }
 
-func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (*time.Duration, string, *apperrors.AppError) {
+func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (int, string, *apperrors.AppError) {
 	password, err := uI.hashing(password)
 	if err != nil {
-		return nil, "", apperrors.HashingPasswordErr.AppendMessage(err)
+		return 0, "", apperrors.HashingPasswordErr.AppendMessage(err)
 	}
 
 	user, err := uI.userRepo.FindOneUserByUserNameAndPassword(ctx, name, password)
 	if err != nil {
-		return nil, "", apperrors.UserNotFoundErr.AppendMessage(err)
+		return 0, "", apperrors.UserNotFoundErr.AppendMessage(err)
 	}
 
 	token, err := uI.makeSignedToken(user)
 	if err != nil {
-		return nil, "", apperrors.CanNotCreateTokenErr.AppendMessage(err)
+		return 0, "", apperrors.CanNotCreateTokenErr.AppendMessage(err)
 	}
 
-	return &uI.expireDuration, token, nil
+	return uI.expireDuration, token, nil
 }
 
 func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) *apperrors.AppError {
@@ -130,7 +126,7 @@ func (uI *userInteractor) makeSignedToken(user *models.User) (string, error) {
 	claims := AuthClaims{
 		User: user,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(uI.expireDuration)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(uI.expireDuration))),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
