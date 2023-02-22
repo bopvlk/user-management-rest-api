@@ -96,3 +96,12 @@ func (appError *AppError) AppendMessage(anyErrs ...interface{}) *AppError {
 		HTTPCode: appError.HTTPCode,
 	}
 }
+
+func Is(err1 error, err2 *AppError) bool {
+	err, ok := err1.(*AppError)
+	if !ok {
+		return false
+	}
+
+	return err.Code == err2.Code
+}

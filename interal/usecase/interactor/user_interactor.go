@@ -12,8 +12,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-//go:generate mockgen -source=user_interfactor.go -destination=moks/mock.go
-
 const CtxUserKey = "user"
 
 type UserInteractor interface {
