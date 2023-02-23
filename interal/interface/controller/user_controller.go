@@ -180,18 +180,18 @@ func saveAuthcookie(c echo.Context, token string, duration int) {
 }
 
 func generatePaginationRequest(c echo.Context) (*models.Pagination, error) {
-	var appErr *apperrors.AppError
-	limit, err := strconv.Atoi(c.QueryParam("limit"))
-	if err != nil {
-
+	var err error
+	limit, errLimit := strconv.Atoi(c.QueryParam("limit"))
+	if errLimit != nil {
+		err = errLimit
 		limit = 5
 	} else if limit < 5 {
 		limit = 5
 	}
 
-	page, err := strconv.Atoi(c.QueryParam("page"))
-	if err != nil {
-		appErr.AppendMessage(err)
+	page, errPage := strconv.Atoi(c.QueryParam("page"))
+	if errPage != nil {
+		err = fmt.Errorf("%v :  %v", err, errPage)
 		if err != nil {
 			page = 1
 		} else if page < 1 {
@@ -201,9 +201,9 @@ func generatePaginationRequest(c echo.Context) (*models.Pagination, error) {
 
 	sort := c.QueryParam("sort")
 	if sort == "" {
-		appErr.AppendMessage("query param 'sort' is not correct")
+		err = fmt.Errorf("%v : query param 'sort' is not correct", err)
 		sort = "id desc"
 	}
 
-	return &models.Pagination{Limit: limit, Page: page, Sort: sort}, appErr
+	return &models.Pagination{Limit: limit, Page: page, Sort: sort}, apperrors.PaginationErr.AppendMessage(err)
 }
