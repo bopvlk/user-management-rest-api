@@ -3,6 +3,7 @@ package interactor
 import (
 	"context"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,14 +13,12 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-const CtxUserKey = "user"
-
 type UserInteractor interface {
-	SignUp(ctx context.Context, user *models.User) (int, string, *apperrors.AppError)
-	SignIn(ctx context.Context, name, password string) (int, string, *apperrors.AppError)
-	DeleteSigner(ctx context.Context, user *models.User) *apperrors.AppError
-	FindOneSigner(ctx context.Context, id uint) (*models.User, *apperrors.AppError)
-	FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, *apperrors.AppError)
+	SignUp(ctx context.Context, user *models.User) (int, string, error)
+	SignIn(ctx context.Context, name, password string) (int, string, error)
+	DeleteSigner(ctx context.Context, user *models.User) error
+	FindOneSigner(ctx context.Context, id uint) (*models.User, error)
+	FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error)
 }
 
 type AuthClaims struct {
@@ -43,7 +42,7 @@ func NewUserInteractor(userRepo repository.UserRepository, hashSalt string, sign
 	}
 }
 
-func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (int, string, *apperrors.AppError) {
+func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (int, string, error) {
 	var err error
 	user.Password, err = uI.hashing(user.Password)
 	if err != nil {
@@ -63,7 +62,7 @@ func (uI *userInteractor) SignUp(ctx context.Context, user *models.User) (int, s
 	return uI.expireDuration, token, nil
 }
 
-func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (int, string, *apperrors.AppError) {
+func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (int, string, error) {
 	password, err := uI.hashing(password)
 	if err != nil {
 		return 0, "", apperrors.HashingPasswordErr.AppendMessage(err)
@@ -82,7 +81,7 @@ func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (in
 	return uI.expireDuration, token, nil
 }
 
-func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) *apperrors.AppError {
+func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) error {
 
 	if err := uI.userRepo.DeleteUser(ctx, user); err != nil {
 		return apperrors.CanNotDeleteUserErr.AppendMessage(err)
@@ -90,7 +89,7 @@ func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) *
 	return nil
 }
 
-func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.User, *apperrors.AppError) {
+func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.User, error) {
 	user, err := uI.userRepo.FindOneUserByID(ctx, id)
 	if err != nil {
 		return nil, apperrors.UserNotFoundErr.AppendMessage(err)
@@ -98,7 +97,7 @@ func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.U
 	return user, nil
 }
 
-func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, *apperrors.AppError) {
+func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error) {
 
 	pagination, users, err := uI.userRepo.FindUsers(ctx, pagination)
 	if err != nil {
@@ -108,11 +107,17 @@ func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pa
 }
 
 func (uI *userInteractor) hashing(password string) (string, error) {
+	if password == "" {
+		return "", errors.New("empty pasword field")
+	}
 	pwd := sha1.New()
 	if _, err := pwd.Write([]byte(password)); err != nil {
 		return "", err
 	}
 
+	if uI.hashSalt == "" {
+		return "", errors.New("empty hashSalt field")
+	}
 	if _, err := pwd.Write([]byte(uI.hashSalt)); err != nil {
 		return "", err
 	}
@@ -124,7 +129,7 @@ func (uI *userInteractor) makeSignedToken(user *models.User) (string, error) {
 	claims := AuthClaims{
 		User: user,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(uI.expireDuration))),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * (time.Duration(uI.expireDuration)))),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
