@@ -105,11 +105,7 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
-	return c.JSON(http.StatusOK, requests.GetOneUserResponse{
-		Message:      fmt.Sprintf("There is user with ID %v", id),
-		UserResponse: *mappers.MapUserToUserResponse(user),
-		IsError:      false,
-	})
+	return c.JSON(http.StatusOK, mappers.MapUserToGetUserResponse(user))
 }
 
 func (uc *userController) GetUsersHandler(c echo.Context) error {

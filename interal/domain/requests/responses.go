@@ -27,9 +27,8 @@ type UserResponse struct {
 }
 
 type GetOneUserResponse struct {
-	Message      string       `json:"message"`
-	UserResponse UserResponse `json:"user"`
-	IsError      bool         `json:"is_error"`
+	Message      string        `json:"message"`
+	UserResponse *UserResponse `json:"user"`
 }
 
 type ErrorResponse struct {

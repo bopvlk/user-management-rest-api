@@ -1,6 +1,7 @@
 package mappers
 
 import (
+	"fmt"
 	"git.foxminded.com.ua/3_REST_API/interal/apperrors"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/requests"
@@ -48,5 +49,12 @@ func MapAppErrorToErrorResponse(appErr *apperrors.AppError) *requests.ErrorRespo
 	return &requests.ErrorResponse{
 		Message:  appErr.Message,
 		HTTPCode: appErr.HTTPCode,
+	}
+}
+
+func MapUserToGetUserResponse(user *models.User) *requests.GetOneUserResponse {
+	return &requests.GetOneUserResponse{
+		Message:      fmt.Sprintf("There is user with ID %v", user.ID),
+		UserResponse: MapUserToUserResponse(user),
 	}
 }

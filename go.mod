@@ -7,8 +7,14 @@ require (
 	github.com/labstack/echo-jwt v0.0.0-20221127215225-c84d41a71003
 	github.com/labstack/echo/v4 v4.10.0
 	github.com/spf13/viper v1.15.0
+	github.com/stretchr/testify v1.8.1
 	gorm.io/driver/mysql v1.4.5
 	gorm.io/gorm v1.24.5
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 )
 
 require (
@@ -24,7 +30,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/magiconair/properties v1.8.7 // indirect
+	github.com/magiconair/properties v1.8.7
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
