@@ -26,7 +26,7 @@ var (
 
 	UserNotFoundErr = AppError{
 		Message:  "can't find user",
-		Code:     "SIGN_IN_ERR",
+		Code:     "DATA_NOT_FOUND_ERR",
 		HTTPCode: http.StatusBadRequest,
 	}
 

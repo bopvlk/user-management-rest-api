@@ -46,10 +46,10 @@ func (uc *userController) SignUpHandler(c echo.Context) error {
 		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
-	duration, token, appErr := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
-	if appErr != nil {
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
+	duration, token, err := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
+	if err != nil {
+		c.Logger().Error(err.(*apperrors.AppError).Code)
+		errResponse := mappers.MapAppErrorToErrorResponse(err.(*apperrors.AppError))
 		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
@@ -98,10 +98,10 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
-	user, appErr := uc.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
-	if appErr != nil {
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
+	user, err := uc.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
+	if err != nil {
+		c.Logger().Error(err.(*apperrors.AppError).Code)
+		errResponse := mappers.MapAppErrorToErrorResponse(err.(*apperrors.AppError))
 		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
@@ -114,17 +114,17 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 
 func (uc *userController) GetUsersHandler(c echo.Context) error {
 	name := getUserClaims(c).User.UserName
-	pagination, appErr := generatePaginationRequest(c)
-	if appErr != nil {
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
+	pagination, err := generatePaginationRequest(c)
+	if err != nil {
+		c.Logger().Error(err.(*apperrors.AppError).Code)
+		errResponse := mappers.MapAppErrorToErrorResponse(err.(*apperrors.AppError))
 		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
-	pagination, users, appErr := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
-	if appErr != nil {
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
+	pagination, users, err := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
+	if err != nil {
+		c.Logger().Error(err.(*apperrors.AppError).Code)
+		errResponse := mappers.MapAppErrorToErrorResponse(err.(*apperrors.AppError))
 		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
 	}
 
@@ -179,7 +179,7 @@ func saveAuthcookie(c echo.Context, token string, duration int) {
 	c.SetCookie(cookie)
 }
 
-func generatePaginationRequest(c echo.Context) (*models.Pagination, *apperrors.AppError) {
+func generatePaginationRequest(c echo.Context) (*models.Pagination, error) {
 	var appErr *apperrors.AppError
 	limit, err := strconv.Atoi(c.QueryParam("limit"))
 	if err != nil {
