@@ -2,18 +2,12 @@ package mappers
 
 import (
 	"fmt"
+
 	"git.foxminded.com.ua/3_REST_API/interal/apperrors"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/requests"
+	"github.com/labstack/echo/v4"
 )
-
-func MapUsersToUsersResponse(u []*models.User) []*requests.UserResponse {
-	ur := make([]*requests.UserResponse, len(u))
-	for i := 0; i < len(u); i++ {
-		ur[i] = MapUserToUserResponse(u[i])
-	}
-	return ur
-}
 
 func MapUserToUserResponse(u *models.User) *requests.UserResponse {
 	return &requests.UserResponse{
@@ -45,16 +39,33 @@ func MapSignInRequestToUser(signIp *requests.SignInRequest) *models.User {
 
 }
 
-func MapAppErrorToErrorResponse(appErr *apperrors.AppError) *requests.ErrorResponse {
-	return &requests.ErrorResponse{
-		Message:  appErr.Message,
-		HTTPCode: appErr.HTTPCode,
-	}
+func MapAppErrorToHTTPError(err error) *echo.HTTPError {
+	appErr := err.(*apperrors.AppError)
+	return echo.NewHTTPError(appErr.HTTPCode, appErr.Error())
 }
 
 func MapUserToGetUserResponse(user *models.User) *requests.GetOneUserResponse {
 	return &requests.GetOneUserResponse{
 		Message:      fmt.Sprintf("There is user with ID %v", user.ID),
 		UserResponse: MapUserToUserResponse(user),
+	}
+}
+
+func MapPaginationAndUsersToGetUsersResponse(users []*models.User, pagination *models.Pagination, name, wrongPaginationParam string) *requests.GetUsersResponse {
+	message := fmt.Sprintf("Hello,%v U are in restricted zone.", name)
+	if wrongPaginationParam != "" {
+		message = fmt.Sprintf("%s\n Warning! %s", message, wrongPaginationParam)
+	}
+
+	ur := make([]*requests.UserResponse, len(users))
+	for i := 0; i < len(users); i++ {
+		ur[i] = MapUserToUserResponse(users[i])
+
+	}
+
+	pagination.Rows = ur
+	return &requests.GetUsersResponse{
+		Message:       message,
+		UsersResponse: pagination,
 	}
 }

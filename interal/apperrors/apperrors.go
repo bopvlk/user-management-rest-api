@@ -39,7 +39,7 @@ var (
 	CanNotCreateUserErr = AppError{
 		Message:  "can't create user",
 		Code:     "SING_UP_ERR",
-		HTTPCode: http.StatusInternalServerError,
+		HTTPCode: http.StatusBadRequest,
 	}
 
 	HashingPasswordErr = AppError{
@@ -82,6 +82,11 @@ var (
 		Message:  "couldn't bind some data",
 		Code:     "BINDING_ERR",
 		HTTPCode: http.StatusBadRequest,
+	}
+	SomeCookieErr = AppError{
+		Message:  "couldn't through out cookie",
+		Code:     "COOKIE_ERR",
+		HTTPCode: http.StatusInternalServerError,
 	}
 )
 

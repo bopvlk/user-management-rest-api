@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"git.foxminded.com.ua/3_REST_API/interal/apperrors"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -23,11 +24,12 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 		return true
 	})
 	if err != nil {
-		return err
+		return apperrors.ValidatorInitializeErr.AppendMessage(err)
 	}
 
 	if err := cv.Validator.Struct(i); err != nil {
-		return fmt.Errorf("password must containe at least 7 letters,  1 number, 1 upper case, 1 special character.  err: %v", err)
+		return apperrors.ValidatorErr.AppendMessage(
+			fmt.Errorf("password must containe at least 7 letters,  1 number, 1 upper case, 1 special character.  err: %v", err))
 	}
 	return nil
 }
