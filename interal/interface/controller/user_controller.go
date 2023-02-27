@@ -34,23 +34,19 @@ func (uc *userController) SignUpHandler(c echo.Context) error {
 	var signUpRequest requests.SignUpRequest
 	if err := c.Bind(&signUpRequest); err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
 	if err := c.Validate(signUpRequest); err != nil {
-		appErr := apperrors.ValidatorErr.AppendMessage(err)
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
 	}
 
 	duration, token, err := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
 	if err != nil {
-		c.Logger().Error(err.(*apperrors.AppError).Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(err.(*apperrors.AppError))
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
 	}
 
 	saveAuthcookie(c, token, duration)
@@ -62,47 +58,33 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 	var signInRequest requests.SignInRequest
 	if err := c.Bind(&signInRequest); err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
-	}
-
-	if err := c.Validate(signInRequest); err != nil {
-		appErr := apperrors.ValidatorErr.AppendMessage(err)
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
-	}
-
-	if signInRequest.Password == "" || signInRequest.UserName == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "We got some problem with request param. ")
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
 	duration, token, err := uc.userInteractor.SignIn(c.Request().Context(), signInRequest.UserName, signInRequest.Password)
 	if err != nil {
-		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusNotFound, "Please check out username and pasword, and try again")
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
 	}
 
 	saveAuthcookie(c, token, duration)
 
-	return c.JSON(http.StatusOK, requests.SignUpInResponse{Token: token, Message: "You were logged in!"})
+	return c.JSON(http.StatusOK, requests.SignUpInResponse{Token: token, Message: "You are logged in!"})
 }
 
 func (uc *userController) GetOneUserHandler(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
-		c.Logger().Error(appErr.Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(appErr)
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
 	user, err := uc.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
 	if err != nil {
-		c.Logger().Error(err.(*apperrors.AppError).Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(err.(*apperrors.AppError))
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
 	}
 
 	return c.JSON(http.StatusOK, mappers.MapUserToGetUserResponse(user))
@@ -110,21 +92,19 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 
 func (uc *userController) GetUsersHandler(c echo.Context) error {
 	name := getUserClaims(c).User.UserName
+
+	var wrongPaginationParam string
 	pagination, err := generatePaginationRequest(c)
 	if err != nil {
-		c.Logger().Error(err.(*apperrors.AppError).Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(err.(*apperrors.AppError))
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
+		c.Logger().Error(err.Error())
+		wrongPaginationParam = "Wrong Pagination Param"
 	}
 
 	pagination, users, err := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
 	if err != nil {
-		c.Logger().Error(err.(*apperrors.AppError).Code)
-		errResponse := mappers.MapAppErrorToErrorResponse(err.(*apperrors.AppError))
-		return echo.NewHTTPError(errResponse.HTTPCode, errResponse)
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
 	}
-
-	pagination.Rows = mappers.MapUsersToUsersResponse(users)
 
 	urlPath := c.Request().URL.Path
 
@@ -139,23 +119,21 @@ func (uc *userController) GetUsersHandler(c echo.Context) error {
 		pagination.NextPage = fmt.Sprintf("%s?limit=%d&page=%d&sort=%s", urlPath, pagination.Limit, pagination.Page+1, pagination.Sort)
 	}
 
-	return c.JSON(http.StatusOK, requests.GetUsersResponse{
-		Message:       fmt.Sprintf("Hello,%v U are in restricted zone", name),
-		UsersResponse: pagination,
-	})
+	return c.JSON(http.StatusOK, mappers.MapPaginationAndUsersToGetUsersResponse(users, pagination, name, wrongPaginationParam))
 }
 
 func (uc *userController) DeleteUserHandler(c echo.Context) error {
 	user := getUserClaims(c).User
 
 	if err := uc.userInteractor.DeleteSigner(c.Request().Context(), user); err != nil {
-		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusNotFound, "some problem with request handling")
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
 	}
 	cookie, err := c.Cookie("Authorization")
 	if err != nil {
-		c.Logger().Error(err)
-		return echo.NewHTTPError(http.StatusNotFound, "some problem with request handling")
+		c.Logger().Warn(err.Error())
+		appErr := apperrors.SomeCookieErr.AppendMessage(err)
+		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 	cookie.MaxAge = -1
 	c.SetCookie(cookie)
@@ -172,6 +150,7 @@ func saveAuthcookie(c echo.Context, token string, duration int) {
 	cookie.Name = "Authorization"
 	cookie.Value = token
 	cookie.MaxAge = duration
+	cookie.HttpOnly = true
 	c.SetCookie(cookie)
 }
 
@@ -201,5 +180,9 @@ func generatePaginationRequest(c echo.Context) (*models.Pagination, error) {
 		sort = "id desc"
 	}
 
-	return &models.Pagination{Limit: limit, Page: page, Sort: sort}, apperrors.PaginationErr.AppendMessage(err)
+	if err != nil {
+		return &models.Pagination{Limit: limit, Page: page, Sort: sort}, apperrors.PaginationErr.AppendMessage(err)
+	}
+
+	return &models.Pagination{Limit: limit, Page: page, Sort: sort}, nil
 }
