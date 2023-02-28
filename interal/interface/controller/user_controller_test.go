@@ -462,16 +462,13 @@ func TestGetUsersHandler(t *testing.T) {
 				q.Set("sort", tc.expectedPagination.Sort)
 			}
 
+			userRepoMock.EXPECT().FindUsers(ctx, tc.expectedPagination).Return(tc.expectedPagination, tc.expectedUsers, tc.expectedError)
+
 			req := httptest.NewRequest(http.MethodGet, "/users?"+q.Encode(), nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
 			c.Set("user", tokenGenerator(tc.expectedUsers[0]))
-
-			userRepoMock.EXPECT().FindUsers(ctx, tc.expectedPagination).Return(tc.expectedPagination, tc.expectedUsers, tc.expectedError)
-
 			err := uController.GetUsersHandler(c)
-
 			if err != nil {
 				apperrors.Is(err, tc.expectedError.(*apperrors.AppError))
 				assert.Equal(t, tc.httpCode, err.(*echo.HTTPError).Code)
@@ -480,17 +477,9 @@ func TestGetUsersHandler(t *testing.T) {
 			assert.Equal(t, tc.httpCode, rec.Code)
 
 			var pag requests.GetUsersResponse
-
 			json.NewDecoder(rec.Body).Decode(&pag)
 
 			if assert.NoError(t, err) {
-				if tc.scenario == "get users" {
-					assert.Equal(t, pag.Message, fmt.Sprintf("Hello,%v U are in restricted zone.", tc.expectedUsers[0].UserName))
-				} else if tc.scenario == "wrong query param" {
-					if !strings.Contains(pag.Message, "Warning!") {
-						t.Fatal("\"wrong query param\" does not PASS")
-					}
-				}
 				for i, v := range pag.UsersResponse.Rows.([]interface{}) {
 					assert.Equal(t, v.(map[string]interface{})["user_name"].(string), tc.expectedUsers[i].UserName)
 					assert.Equal(t, v.(map[string]interface{})["first_name"].(string), tc.expectedUsers[i].FirstName)

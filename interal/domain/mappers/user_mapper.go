@@ -51,12 +51,8 @@ func MapUserToGetUserResponse(user *models.User) *requests.GetOneUserResponse {
 	}
 }
 
-func MapPaginationAndUsersToGetUsersResponse(users []*models.User, pagination *models.Pagination, name, wrongPaginationParam string) *requests.GetUsersResponse {
+func MapPaginationAndUsersToGetUsersResponse(users []*models.User, pagination *models.Pagination, name string) *requests.GetUsersResponse {
 	message := fmt.Sprintf("Hello,%v U are in restricted zone.", name)
-	if wrongPaginationParam != "" {
-		message = fmt.Sprintf("%s\n Warning! %s", message, wrongPaginationParam)
-	}
-
 	ur := make([]*requests.UserResponse, len(users))
 	for i := 0; i < len(users); i++ {
 		ur[i] = MapUserToUserResponse(users[i])

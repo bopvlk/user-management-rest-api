@@ -27,10 +27,9 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 }
 
 func (ur *userRepository) FindUsers(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error) {
-	var users []*models.User
 
-	var offset int = (pagination.Page - 1) * pagination.Limit
-
+	offset := (pagination.Page - 1) * pagination.Limit
+	users := []*models.User{}
 	if err := ur.db.WithContext(ctx).Limit(pagination.Limit).Offset(offset).Order(pagination.Sort).Find(&users).Error; err != nil {
 		return nil, nil, err
 	}
