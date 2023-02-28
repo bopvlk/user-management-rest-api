@@ -1,0 +1,28 @@
+version: '3.3'
+services:
+
+  usermanager_api:
+    restart: always
+    build: 
+      context: ../../
+      dockerfile: ./build/package/Dockerfile
+    ports:
+      - '8080:8080'
+    depends_on:
+      - mysql
+    env_file:
+      - ../../config/config.env
+    command: ./bin/usermanager
+
+  mysql:
+    image: mysql:5.7-oracle
+    ports:
+      - '3306:3306'
+    restart: always
+    env_file:
+      - ./config.env
+    volumes:
+      - my-db:/var/lib/mysql
+
+volumes:
+  my-db:
