@@ -19,6 +19,7 @@ type GetUsersResponse struct {
 type UserResponse struct {
 	ID        uint       `json:"id"`
 	UserName  string     `json:"user_name"`
+	Role      string     `json:"role"`
 	FirstName string     `json:"first_name"`
 	LastName  string     `json:"last_name"`
 	CreatedAt *time.Time `json:"created_at"`
@@ -29,6 +30,11 @@ type UserResponse struct {
 type GetOneUserResponse struct {
 	Message      string        `json:"message"`
 	UserResponse *UserResponse `json:"user"`
+}
+
+type UpdateUserResponce struct {
+	Message      string       `json:"message"`
+	UserResponse UserResponse `json:"user"`
 }
 
 type ErrorResponse struct {

@@ -88,6 +88,17 @@ var (
 		Code:     "COOKIE_ERR",
 		HTTPCode: http.StatusInternalServerError,
 	}
+	WrongRoleErr = AppError{
+		Message:  "you couldn't do this request. you shoud change the role",
+		Code:     "ROLE_ERR",
+		HTTPCode: http.StatusBadRequest,
+	}
+
+	CanNotUpdateErr = AppError{
+		Message:  "couldn't update the user",
+		Code:     "UPDATE_ERR",
+		HTTPCode: http.StatusInternalServerError,
+	}
 )
 
 func (appError *AppError) Error() string {

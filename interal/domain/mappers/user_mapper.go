@@ -13,6 +13,7 @@ func MapUserToUserResponse(u *models.User) *requests.UserResponse {
 	return &requests.UserResponse{
 		ID:        u.ID,
 		UserName:  u.UserName,
+		Role:      u.Role,
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
 		CreatedAt: u.CreatedAt,
@@ -24,11 +25,20 @@ func MapUserToUserResponse(u *models.User) *requests.UserResponse {
 func MapSignUpRequestToUser(signUp *requests.SignUpRequest) *models.User {
 	return &models.User{
 		UserName:  signUp.UserName,
+		Role:      signUp.Role,
 		FirstName: signUp.FirstName,
 		LastName:  signUp.LastName,
 		Password:  signUp.Password,
 	}
+}
 
+func MapUpdateRequestToUser(signUp *requests.UpdateRequest) *models.User {
+	return &models.User{
+		UserName:  signUp.UserName,
+		Role:      signUp.Role,
+		FirstName: signUp.FirstName,
+		LastName:  signUp.LastName,
+	}
 }
 
 func MapSignInRequestToUser(signIp *requests.SignInRequest) *models.User {
@@ -63,5 +73,21 @@ func MapPaginationAndUsersToGetUsersResponse(users []*models.User, pagination *m
 	return &requests.GetUsersResponse{
 		Message:       message,
 		UsersResponse: pagination,
+	}
+}
+
+func MapUserToUpdateResponse(u *models.User) *requests.UpdateUserResponce {
+	return &requests.UpdateUserResponce{
+		Message: fmt.Sprintf("There is updated user with id: %d", u.ID),
+		UserResponse: requests.UserResponse{
+			ID:        u.ID,
+			UserName:  u.UserName,
+			Role:      u.Role,
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
+			CreatedAt: u.CreatedAt,
+			UpdatedAt: u.UpdatedAt,
+			DeletedAt: &u.DeletedAt.Time,
+		},
 	}
 }

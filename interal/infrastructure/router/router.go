@@ -20,7 +20,6 @@ func NewRouter(e *echo.Echo, config *config.Config, appController *controller.Ap
 
 	apiGroup := e.Group("/api/v1")
 	apiGroup.POST("/sing-up", func(c echo.Context) error { return appController.SignUpHandler(c) })
-	apiGroup.GET("/user/:id", func(c echo.Context) error { return appController.GetOneUserHandler(c) })
 	apiGroup.POST("/sing-in", func(c echo.Context) error { return appController.SignInHandler(c) })
 
 	restrictedGroup := apiGroup.Group("/restricted")
@@ -32,7 +31,9 @@ func NewRouter(e *echo.Echo, config *config.Config, appController *controller.Ap
 		TokenLookup: "cookie:Authorization",
 	}))
 
+	restrictedGroup.GET("/user/:id", func(c echo.Context) error { return appController.GetOneUserHandler(c) }) // changed
 	restrictedGroup.GET("/users", func(c echo.Context) error { return appController.GetUsersHandler(c) })
-	restrictedGroup.DELETE("/users", func(c echo.Context) error { return appController.DeleteUserHandler(c) })
+	restrictedGroup.DELETE("/user/:id", func(c echo.Context) error { return appController.DeleteUserHandler(c) }) //canged
+	restrictedGroup.PUT("/user/:id", func(c echo.Context) error { return appController.UpdateUserHandler(c) })    //changed
 	return e
 }

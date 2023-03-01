@@ -1,0 +1,13 @@
+.SILENT:
+
+
+build: 
+	sudo docker-compose -f ./build/package/docker-compose.yml up --build
+
+format:
+	go vet ./...
+	go fmt ./...
+	go fix ./...
+
+lint:	
+	golangci-lint run -v ./...

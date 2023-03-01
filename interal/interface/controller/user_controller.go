@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -23,6 +24,7 @@ type UserController interface {
 	GetUsersHandler(ctx echo.Context) error
 	SignInHandler(c echo.Context) error
 	DeleteUserHandler(c echo.Context) error
+	UpdateUserHandler(c echo.Context) error
 }
 
 func NewUserController(us interactor.UserInteractor) UserController {
@@ -90,6 +92,12 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 }
 
 func (uc *userController) GetUsersHandler(c echo.Context) error {
+	if getUserClaims(c).User.Role == "user" {
+		appErr := &apperrors.WrongRoleErr
+		c.Logger().Error(appErr.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
+
 	name := getUserClaims(c).User.UserName
 	pagination := mappers.MapContextToPagination(c)
 	pagination, users, err := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
@@ -114,22 +122,68 @@ func (uc *userController) GetUsersHandler(c echo.Context) error {
 }
 
 func (uc *userController) DeleteUserHandler(c echo.Context) error {
-	user := getUserClaims(c).User
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
 
-	if err := uc.userInteractor.DeleteSigner(c.Request().Context(), user); err != nil {
+	claims := getUserClaims(c)
+
+	switch {
+	case claims.User.Role == "user" && claims.User.ID != uint(id):
+		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'user'"))
+		c.Logger().Error(appErr.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	case claims.User.Role == "moderator" && claims.User.ID != uint(id):
+		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'moderator'"))
+		c.Logger().Error(appErr.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
+
+	if err := uc.userInteractor.DeleteSignerByID(c.Request().Context(), id); err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
 	}
-	cookie, err := c.Cookie("Authorization")
+
+	return c.JSON(http.StatusOK, fmt.Sprintf("User with id:%d is deleted", id))
+}
+
+func (uc *userController) UpdateUserHandler(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.Logger().Warn(err.Error())
-		appErr := apperrors.SomeCookieErr.AppendMessage(err)
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
-	cookie.MaxAge = -1
-	c.SetCookie(cookie)
 
-	return c.JSON(http.StatusOK, fmt.Sprintf("User %s with id:%d is deleted", user.UserName, user.ID))
+	claims := getUserClaims(c)
+	switch {
+	case claims.User.Role == "user" && claims.User.ID != uint(id):
+		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'user'"))
+		c.Logger().Error(appErr.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	case claims.User.Role == "moderator" && claims.User.ID != uint(id):
+		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'moderator'"))
+		c.Logger().Error(appErr.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
+
+	var updateRequest requests.UpdateRequest
+	if err := c.Bind(&updateRequest); err != nil {
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
+
+	user, err := uc.userInteractor.UpdateSignersByID(c.Request().Context(), id, int(claims.User.ID), mappers.MapUpdateRequestToUser(&updateRequest))
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
 }
 
 func getUserClaims(c echo.Context) *interactor.AuthClaims {
