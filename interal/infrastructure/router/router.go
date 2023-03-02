@@ -2,6 +2,7 @@ package router
 
 import (
 	"git.foxminded.com.ua/3_REST_API/interal/config"
+	customMiddleware "git.foxminded.com.ua/3_REST_API/interal/infrastructure/middleware"
 	"git.foxminded.com.ua/3_REST_API/interal/interface/controller"
 	"git.foxminded.com.ua/3_REST_API/interal/usecase/interactor"
 	v "git.foxminded.com.ua/3_REST_API/interal/validator"
@@ -31,9 +32,9 @@ func NewRouter(e *echo.Echo, config *config.Config, appController *controller.Ap
 		TokenLookup: "cookie:Authorization",
 	}))
 
-	restrictedGroup.GET("/user/:id", func(c echo.Context) error { return appController.GetOneUserHandler(c) }) // changed
-	restrictedGroup.GET("/users", func(c echo.Context) error { return appController.GetUsersHandler(c) })
-	restrictedGroup.DELETE("/user/:id", func(c echo.Context) error { return appController.DeleteUserHandler(c) }) //canged
-	restrictedGroup.PUT("/user/:id", func(c echo.Context) error { return appController.UpdateUserHandler(c) })    //changed
+	restrictedGroup.GET("/user/:id", func(c echo.Context) error { return appController.GetOneUserHandler(c) })
+	restrictedGroup.GET("/users", func(c echo.Context) error { return appController.GetUsersHandler(c) }, customMiddleware.ModeratorRoleMiddleware)
+	restrictedGroup.DELETE("/user/:id", func(c echo.Context) error { return appController.DeleteUserHandler(c) }, customMiddleware.AdminRoleMiddleware)
+	restrictedGroup.PUT("/user/:id", func(c echo.Context) error { return appController.UpdateUserHandler(c) }, customMiddleware.AdminRoleMiddleware)
 	return e
 }

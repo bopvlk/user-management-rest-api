@@ -92,13 +92,13 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 }
 
 func (uc *userController) GetUsersHandler(c echo.Context) error {
-	if getUserClaims(c).User.Role == "user" {
+	if GetUserClaims(c).User.Role == "user" {
 		appErr := &apperrors.WrongRoleErr
 		c.Logger().Error(appErr.Error())
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	name := getUserClaims(c).User.UserName
+	name := GetUserClaims(c).User.UserName
 	pagination := mappers.MapContextToPagination(c)
 	pagination, users, err := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
 	if err != nil {
@@ -129,19 +129,6 @@ func (uc *userController) DeleteUserHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	claims := getUserClaims(c)
-
-	switch {
-	case claims.User.Role == "user" && claims.User.ID != uint(id):
-		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'user'"))
-		c.Logger().Error(appErr.Error())
-		return mappers.MapAppErrorToHTTPError(appErr)
-	case claims.User.Role == "moderator" && claims.User.ID != uint(id):
-		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'moderator'"))
-		c.Logger().Error(appErr.Error())
-		return mappers.MapAppErrorToHTTPError(appErr)
-	}
-
 	if err := uc.userInteractor.DeleteSignerByID(c.Request().Context(), id); err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -158,7 +145,7 @@ func (uc *userController) UpdateUserHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	claims := getUserClaims(c)
+	claims := GetUserClaims(c)
 	switch {
 	case claims.User.Role == "user" && claims.User.ID != uint(id):
 		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'user'"))
@@ -186,7 +173,7 @@ func (uc *userController) UpdateUserHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
 }
 
-func getUserClaims(c echo.Context) *interactor.AuthClaims {
+func GetUserClaims(c echo.Context) *interactor.AuthClaims {
 	return c.Get("user").(*jwt.Token).Claims.(*interactor.AuthClaims)
 }
 
