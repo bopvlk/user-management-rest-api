@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -24,7 +23,9 @@ type UserController interface {
 	GetUsersHandler(ctx echo.Context) error
 	SignInHandler(c echo.Context) error
 	DeleteUserHandler(c echo.Context) error
+	DeleteOwnerProfileHandler(c echo.Context) error
 	UpdateUserHandler(c echo.Context) error
+	UpdateOwnerProfileHandler(c echo.Context) error
 }
 
 func NewUserController(us interactor.UserInteractor) UserController {
@@ -137,23 +138,22 @@ func (uc *userController) DeleteUserHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, fmt.Sprintf("User with id:%d is deleted", id))
 }
 
+func (uc *userController) DeleteOwnerProfileHandler(c echo.Context) error {
+	id := int(GetUserClaims(c).User.ID)
+
+	if err := uc.userInteractor.DeleteOwnSignIn(c.Request().Context(), id); err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, "Your profile is deleted")
+}
+
 func (uc *userController) UpdateUserHandler(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
 		c.Logger().Error(err.Error())
-		return mappers.MapAppErrorToHTTPError(appErr)
-	}
-
-	claims := GetUserClaims(c)
-	switch {
-	case claims.User.Role == "user" && claims.User.ID != uint(id):
-		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'user'"))
-		c.Logger().Error(appErr.Error())
-		return mappers.MapAppErrorToHTTPError(appErr)
-	case claims.User.Role == "moderator" && claims.User.ID != uint(id):
-		appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'moderator'"))
-		c.Logger().Error(appErr.Error())
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
@@ -164,7 +164,26 @@ func (uc *userController) UpdateUserHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	user, err := uc.userInteractor.UpdateSignersByID(c.Request().Context(), id, int(claims.User.ID), mappers.MapUpdateRequestToUser(&updateRequest))
+	user, err := uc.userInteractor.UpdateSignersByID(c.Request().Context(), id, mappers.MapUpdateRequestToUser(&updateRequest))
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
+}
+
+func (uc *userController) UpdateOwnerProfileHandler(c echo.Context) error {
+	id := int(GetUserClaims(c).User.ID)
+
+	var updateOwnRequest requests.UpdateOwnRequest
+	if err := c.Bind(&updateOwnRequest); err != nil {
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
+
+	user, err := uc.userInteractor.UpdateOwnSignIn(c.Request().Context(), id, mappers.MapUpdateOwnRequestToUser(&updateOwnRequest))
 	if err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
