@@ -36,5 +36,8 @@ func NewRouter(e *echo.Echo, config *config.Config, appController *controller.Ap
 	restrictedGroup.GET("/users", func(c echo.Context) error { return appController.GetUsersHandler(c) }, customMiddleware.ModeratorRoleMiddleware)
 	restrictedGroup.DELETE("/user/:id", func(c echo.Context) error { return appController.DeleteUserHandler(c) }, customMiddleware.AdminRoleMiddleware)
 	restrictedGroup.PUT("/user/:id", func(c echo.Context) error { return appController.UpdateUserHandler(c) }, customMiddleware.AdminRoleMiddleware)
+	restrictedGroup.DELETE("/user/profile", func(c echo.Context) error { return appController.DeleteOwnerProfileHandler(c) })
+	restrictedGroup.PUT("/user/profile", func(c echo.Context) error { return appController.UpdateOwnerProfileHandler(c) })
+
 	return e
 }

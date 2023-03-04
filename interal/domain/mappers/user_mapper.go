@@ -41,6 +41,16 @@ func MapUpdateRequestToUser(signUp *requests.UpdateRequest) *models.User {
 	}
 }
 
+func MapUpdateOwnRequestToUser(signUp *requests.UpdateOwnRequest) *models.User {
+	return &models.User{
+		UserName:  signUp.UserName,
+		Role:      signUp.Role,
+		FirstName: signUp.FirstName,
+		LastName:  signUp.LastName,
+		Password:  signUp.Password,
+	}
+}
+
 func MapSignInRequestToUser(signIp *requests.SignInRequest) *models.User {
 	return &models.User{
 		UserName: signIp.UserName,

@@ -14,8 +14,16 @@ type SignInRequest struct {
 }
 
 type UpdateRequest struct {
-	UserName  string `json:"user_name" validate:"required,min=5"`
-	Role      string `json:"role" validate:"required,contains=user|moderator|admin"`
-	FirstName string `json:"first_name" validate:"required"`
-	LastName  string `json:"last_name" validate:"required"`
+	UserName  string `json:"user_name" validate:"min=5"`
+	Role      string `json:"role" validate:"contains=user|contains=moderator|contains=admin"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+type UpdateOwnRequest struct {
+	UserName  string `json:"user_name" validate:"min=5"`
+	Role      string `json:"role" validate:"contains=user|contains=moderator|contains=admin"`
+	Password  string `json:"password" validate:"omitempty,password,min=7"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }

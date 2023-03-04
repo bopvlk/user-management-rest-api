@@ -16,10 +16,12 @@ import (
 type UserInteractor interface {
 	SignUp(ctx context.Context, user *models.User) (int, string, error)
 	SignIn(ctx context.Context, name, password string) (int, string, error)
-	DeleteSignerByID(ctx context.Context, id int) error
 	FindOneSigner(ctx context.Context, id uint) (*models.User, error)
 	FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error)
-	UpdateSignersByID(ctx context.Context, id, myID int, user *models.User) (*models.User, error)
+	DeleteSignerByID(ctx context.Context, id int) error
+	DeleteOwnSignIn(ctx context.Context, id int) error
+	UpdateSignersByID(ctx context.Context, id int, user *models.User) (*models.User, error)
+	UpdateOwnSignIn(ctx context.Context, id int, user *models.User) (*models.User, error)
 }
 
 type AuthClaims struct {
@@ -90,6 +92,14 @@ func (uI *userInteractor) DeleteSignerByID(ctx context.Context, id int) error {
 	return nil
 }
 
+func (uI *userInteractor) DeleteOwnSignIn(ctx context.Context, id int) error {
+
+	if err := uI.userRepo.DeleteOwnUser(ctx, id); err != nil {
+		return apperrors.CanNotDeleteUserErr.AppendMessage(err)
+	}
+	return nil
+}
+
 func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.User, error) {
 	user, err := uI.userRepo.FindOneUserByID(ctx, id)
 	if err != nil {
@@ -107,8 +117,17 @@ func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pa
 	return pagination, users, nil
 }
 
-func (uI *userInteractor) UpdateSignersByID(ctx context.Context, id, myID int, user *models.User) (*models.User, error) {
-	user, err := uI.userRepo.UpdateUserByID(ctx, id, myID, user)
+func (uI *userInteractor) UpdateSignersByID(ctx context.Context, id int, user *models.User) (*models.User, error) {
+	user, err := uI.userRepo.UpdateUserByID(ctx, id, user)
+	if err != nil {
+		return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
+	}
+
+	return user, nil
+}
+
+func (uI *userInteractor) UpdateOwnSignIn(ctx context.Context, id int, user *models.User) (*models.User, error) {
+	user, err := uI.userRepo.UpdateOwnUser(ctx, id, user)
 	if err != nil {
 		return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
 	}

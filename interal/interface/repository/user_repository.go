@@ -17,7 +17,9 @@ type UserRepository interface {
 	FindOneUserByID(ctx context.Context, id uint) (*models.User, error)
 	FindOneUserByUserNameAndPassword(ctx context.Context, username, password string) (*models.User, error)
 	DeleteUserByID(ctx context.Context, id int) error
-	UpdateUserByID(ctx context.Context, id, myID int, user *models.User) (*models.User, error)
+	DeleteOwnUser(ctx context.Context, id int) error
+	UpdateUserByID(ctx context.Context, id int, user *models.User) (*models.User, error)
+	UpdateOwnUser(ctx context.Context, id int, user *models.User) (*models.User, error)
 }
 
 type userRepository struct {
@@ -68,21 +70,47 @@ func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) (*m
 }
 
 func (ur *userRepository) DeleteUserByID(ctx context.Context, id int) error {
+	tempUser := &models.User{}
+	tx := ur.db.WithContext(ctx).Where("id = ?", id).First(&tempUser)
+	if tx.Error != nil {
+		return tx.Error
+	}
+	if tempUser.Role == "admin" {
+		return errors.New("admin user not allowed to delete")
+	}
+
 	if err := ur.db.WithContext(ctx).Delete(&models.User{}, id).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *userRepository) UpdateUserByID(ctx context.Context, id, myID int, user *models.User) (*models.User, error) {
+func (ur *userRepository) DeleteOwnUser(ctx context.Context, id int) error {
+
+	if err := ur.db.WithContext(ctx).Delete(&models.User{}, id).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *userRepository) UpdateUserByID(ctx context.Context, id int, user *models.User) (*models.User, error) {
 	tempUser := &models.User{}
 	tx := ur.db.WithContext(ctx).Where("id = ?", id).First(&tempUser)
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	if tempUser.Role == "admin" && id != myID {
+	if tempUser.Role == "admin" {
 		return nil, errors.New("admin user not allowed to update")
 	}
 	tx.Updates(&user).First(&user)
+	return user, nil
+}
+func (ur *userRepository) UpdateOwnUser(ctx context.Context, id int, user *models.User) (*models.User, error) {
+
+	tx := ur.db.WithContext(ctx).Where("id = ?", id).Updates(&user).First(&user)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
 	return user, nil
 }

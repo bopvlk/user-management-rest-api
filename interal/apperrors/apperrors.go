@@ -97,7 +97,7 @@ var (
 	CanNotUpdateErr = AppError{
 		Message:  "couldn't update the user",
 		Code:     "UPDATE_ERR",
-		HTTPCode: http.StatusInternalServerError,
+		HTTPCode: http.StatusBadRequest,
 	}
 )
 

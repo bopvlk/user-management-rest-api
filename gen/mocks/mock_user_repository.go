@@ -50,18 +50,32 @@ func (mr *MockUserRepositoryMockRecorder) CreateUser(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUserRepository)(nil).CreateUser), arg0, arg1)
 }
 
-// DeleteUser mocks base method.
-func (m *MockUserRepository) DeleteUser(arg0 context.Context, arg1 *models.User) error {
+// DeleteOwnUser mocks base method.
+func (m *MockUserRepository) DeleteOwnUser(arg0 context.Context, arg1 int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteUser", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteOwnUser", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteUser indicates an expected call of DeleteUser.
-func (mr *MockUserRepositoryMockRecorder) DeleteUser(arg0, arg1 interface{}) *gomock.Call {
+// DeleteOwnUser indicates an expected call of DeleteOwnUser.
+func (mr *MockUserRepositoryMockRecorder) DeleteOwnUser(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockUserRepository)(nil).DeleteUser), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOwnUser", reflect.TypeOf((*MockUserRepository)(nil).DeleteOwnUser), arg0, arg1)
+}
+
+// DeleteUserByID mocks base method.
+func (m *MockUserRepository) DeleteUserByID(arg0 context.Context, arg1 int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteUserByID", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteUserByID indicates an expected call of DeleteUserByID.
+func (mr *MockUserRepositoryMockRecorder) DeleteUserByID(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUserByID", reflect.TypeOf((*MockUserRepository)(nil).DeleteUserByID), arg0, arg1)
 }
 
 // FindOneUserByID mocks base method.
@@ -108,4 +122,34 @@ func (m *MockUserRepository) FindUsers(arg0 context.Context, arg1 *models.Pagina
 func (mr *MockUserRepositoryMockRecorder) FindUsers(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindUsers", reflect.TypeOf((*MockUserRepository)(nil).FindUsers), arg0, arg1)
+}
+
+// UpdateOwnUser mocks base method.
+func (m *MockUserRepository) UpdateOwnUser(arg0 context.Context, arg1 int, arg2 *models.User) (*models.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateOwnUser", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*models.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateOwnUser indicates an expected call of UpdateOwnUser.
+func (mr *MockUserRepositoryMockRecorder) UpdateOwnUser(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOwnUser", reflect.TypeOf((*MockUserRepository)(nil).UpdateOwnUser), arg0, arg1, arg2)
+}
+
+// UpdateUserByID mocks base method.
+func (m *MockUserRepository) UpdateUserByID(arg0 context.Context, arg1 int, arg2 *models.User) (*models.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateUserByID", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*models.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateUserByID indicates an expected call of UpdateUserByID.
+func (mr *MockUserRepositoryMockRecorder) UpdateUserByID(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserByID", reflect.TypeOf((*MockUserRepository)(nil).UpdateUserByID), arg0, arg1, arg2)
 }
