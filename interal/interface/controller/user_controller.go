@@ -53,7 +53,7 @@ func (uc *userController) SignUpHandler(c echo.Context) error {
 
 	saveAuthcookie(c, token, duration)
 
-	return c.JSON(http.StatusCreated, requests.SignUpInResponse{Token: token, Message: "You are logged in!"})
+	return c.JSON(http.StatusCreated, requests.SignUpInResponse{Message: "You are logged in!"})
 }
 
 func (uc *userController) SignInHandler(c echo.Context) error {
@@ -72,7 +72,7 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 
 	saveAuthcookie(c, token, duration)
 
-	return c.JSON(http.StatusOK, requests.SignUpInResponse{Token: token, Message: "You are logged in!"})
+	return c.JSON(http.StatusOK, requests.SignUpInResponse{Message: "You are logged in!"})
 }
 
 func (uc *userController) GetOneUserHandler(c echo.Context) error {

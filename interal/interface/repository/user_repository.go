@@ -56,7 +56,7 @@ func (ur *userRepository) FindOneUserByID(ctx context.Context, id uint) (*models
 
 func (ur *userRepository) FindOneUserByUserNameAndPassword(ctx context.Context, username, password string) (*models.User, error) {
 	user := models.User{}
-	if err := ur.db.WithContext(ctx).Where("username = ?", username).Where("password = ?", password).First(&user).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Where("password = ?", password).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -70,12 +70,12 @@ func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) (*m
 }
 
 func (ur *userRepository) DeleteUserByID(ctx context.Context, id int) error {
-	tempUser := &models.User{}
-	tx := ur.db.WithContext(ctx).Where("id = ?", id).First(&tempUser)
+	user := &models.User{}
+	tx := ur.db.WithContext(ctx).Where("id = ?", id).First(&user)
 	if tx.Error != nil {
 		return tx.Error
 	}
-	if tempUser.Role == "admin" {
+	if user.Role == "admin" {
 		return errors.New("admin user not allowed to delete")
 	}
 

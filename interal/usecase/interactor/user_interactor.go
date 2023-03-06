@@ -87,6 +87,9 @@ func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (in
 func (uI *userInteractor) DeleteSignerByID(ctx context.Context, id int) error {
 
 	if err := uI.userRepo.DeleteUserByID(ctx, id); err != nil {
+		if err == &apperrors.WrongRoleErr {
+			return err
+		}
 		return apperrors.CanNotDeleteUserErr.AppendMessage(err)
 	}
 	return nil
@@ -111,6 +114,9 @@ func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.U
 func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error) {
 	pagination, users, err := uI.userRepo.FindUsers(ctx, pagination)
 	if err != nil {
+		if err == &apperrors.WrongRoleErr {
+			return nil, nil, err
+		}
 		return nil, nil, apperrors.PaginationErr.AppendMessage(err)
 	}
 

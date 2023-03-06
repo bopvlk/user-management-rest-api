@@ -29,48 +29,9 @@ import (
 
 func TestSignUpHandler(t *testing.T) {
 
-	now := time.Now()
-
-	testingHashedUserFunc := func(password string) string {
-		pwd := sha1.New()
-		pwd.Write([]byte(password))
-		pwd.Write([]byte("hash_salt"))
-		return fmt.Sprintf("%x", pwd.Sum(nil))
-	}
-
-	inputUser := &models.User{
-		ID:        0,
-		UserName:  "JohnHall",
-		Role:      "admin",
-		FirstName: "John",
-		LastName:  "Hall",
-		Password:  testingHashedUserFunc("very12difficult()Password"),
-		CreatedAt: nil,
-		UpdatedAt: nil,
-	}
-
-	expectedUser := &models.User{
-		ID:        124,
-		UserName:  "JohnHall",
-		Role:      "admin",
-		FirstName: "John",
-		LastName:  "Hall",
-		Password:  testingHashedUserFunc("very12difficult()Password"),
-		CreatedAt: &now,
-		UpdatedAt: &now,
-	}
-
-	tokenGenerator := func(user *models.User) string {
-		claims := interactor.AuthClaims{
-			User: user,
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * (time.Duration(1)))),
-			},
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		tokenstr, _ := token.SignedString([]byte("signing_key"))
-		return tokenstr
-	}
+	inputUser := getTestUser()
+	inputUser.ID = 0
+	inputUser.Password = hashingUserFunc(inputUser.Password)
 
 	testTable := []struct {
 		scenario         string
@@ -84,27 +45,27 @@ func TestSignUpHandler(t *testing.T) {
 		{
 			"user successfully redistered",
 			inputUser,
-			expectedUser,
+			getTestUser(),
 			`{"user_name": "JohnHall", "role": "admin", "first_name": "John", "last_name": "Hall", "password": "very12difficult()Password"}`,
-			requests.SignUpInResponse{Token: tokenGenerator(expectedUser), Message: "You are logged in!"},
+			requests.SignUpInResponse{Message: "You are logged in!"},
 			http.StatusCreated,
 			nil,
 		},
 		{
 			"wrong request body",
 			inputUser,
-			expectedUser,
+			getTestUser(),
 			`{"use, "first_name": "John",  "Hall", "password": "}`,
-			requests.SignUpInResponse{Token: tokenGenerator(expectedUser), Message: "You are logged in!"},
+			requests.SignUpInResponse{Message: "You are logged in!"},
 			http.StatusBadRequest,
 			&apperrors.CanNotBindErr,
 		},
 		{
 			"can not tgrough out a validation",
 			inputUser,
-			expectedUser,
+			getTestUser(),
 			`{"user_name": "JohnHall", "first_name": "John", "last_name": "Hall", "password": "1234"}`,
-			requests.SignUpInResponse{Token: tokenGenerator(expectedUser), Message: "You are logged in!"},
+			requests.SignUpInResponse{Message: "You are logged in!"},
 			http.StatusBadRequest,
 			&apperrors.CanNotBindErr,
 		},
@@ -113,7 +74,7 @@ func TestSignUpHandler(t *testing.T) {
 			inputUser,
 			nil,
 			`{"user_name": "JohnHall", "first_name": "John", "last_name": "Hall", "password": "very12difficult()Password"}`,
-			requests.SignUpInResponse{Token: tokenGenerator(expectedUser), Message: "You are logged in!"},
+			requests.SignUpInResponse{Message: "You are logged in!"},
 			http.StatusBadRequest,
 			&apperrors.CanNotCreateUserErr,
 		},
@@ -158,38 +119,6 @@ func TestSignUpHandler(t *testing.T) {
 
 func TestSignInHandler(t *testing.T) {
 
-	now := time.Now()
-
-	testingHashedUserFunc := func(password string) string {
-		pwd := sha1.New()
-		pwd.Write([]byte(password))
-		pwd.Write([]byte("hash_salt"))
-		return fmt.Sprintf("%x", pwd.Sum(nil))
-	}
-
-	expectedUser := &models.User{
-		ID:        124,
-		UserName:  "JohnHall",
-		Role:      "admin",
-		FirstName: "John",
-		LastName:  "Hall",
-		Password:  testingHashedUserFunc("very12difficult()Password"),
-		CreatedAt: &now,
-		UpdatedAt: &now,
-	}
-
-	tokenGenerator := func(user *models.User) string {
-		claims := interactor.AuthClaims{
-			User: user,
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * (time.Duration(1)))),
-			},
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		tokenstr, _ := token.SignedString([]byte("signing_key"))
-		return tokenstr
-	}
-
 	testTable := []struct {
 		scenario         string
 		inputuser        *models.User
@@ -207,13 +136,13 @@ func TestSignInHandler(t *testing.T) {
 				Role:      "admin",
 				FirstName: "John",
 				LastName:  "Hall",
-				Password:  testingHashedUserFunc("very12difficult()Password"),
+				Password:  hashingUserFunc("very12difficult()Password"),
 				CreatedAt: nil,
 				UpdatedAt: nil,
 			},
-			expectedUser,
+			getTestUser(),
 			`{"user_name": "JohnHall", "password": "very12difficult()Password"}`,
-			requests.SignUpInResponse{Token: tokenGenerator(expectedUser), Message: "You are logged in!"},
+			requests.SignUpInResponse{Message: "You are logged in!"},
 			http.StatusOK,
 			nil,
 		},
@@ -224,11 +153,11 @@ func TestSignInHandler(t *testing.T) {
 				UserName:  "JohnHall",
 				FirstName: "John",
 				LastName:  "Hall",
-				Password:  testingHashedUserFunc("very12difficult()Password"),
+				Password:  hashingUserFunc("very12difficult()Password"),
 				CreatedAt: nil,
 				UpdatedAt: nil,
 			},
-			expectedUser,
+			getTestUser(),
 			`{"use, "first_name": "John",  "Hall", "password": "}`,
 			requests.SignUpInResponse{},
 			http.StatusBadRequest,
@@ -241,13 +170,13 @@ func TestSignInHandler(t *testing.T) {
 				UserName:  "JohnHall",
 				FirstName: "John",
 				LastName:  "Hall",
-				Password:  testingHashedUserFunc("very12difficult()Password"),
+				Password:  hashingUserFunc("very12difficult()Password"),
 				CreatedAt: nil,
 				UpdatedAt: nil,
 			},
 			nil,
 			`{"user_name": "JohnHall", "password": "very12difficult()Password"}`,
-			requests.SignUpInResponse{Token: tokenGenerator(expectedUser), Message: "You are logged in!"},
+			requests.SignUpInResponse{Message: "You are logged in!"},
 			http.StatusBadRequest,
 			&apperrors.UserNotFoundErr,
 		},
@@ -293,20 +222,13 @@ func TestSignInHandler(t *testing.T) {
 
 func TestGetOneUserHandler(t *testing.T) {
 
-	now := time.Now()
-	user := &models.User{
-		ID:        1234,
-		UserName:  "John",
-		FirstName: "John",
-		LastName:  "Hall",
-		CreatedAt: &now,
-		UpdatedAt: &now,
-	}
+	user := getTestUser()
 	userId := strconv.Itoa(int(user.ID))
 
 	testTable := []struct {
 		scenario      string
 		expectedUser  *models.User
+		inputUserID   string
 		response      *requests.GetOneUserResponse
 		httpCode      int
 		expectedError error
@@ -314,6 +236,7 @@ func TestGetOneUserHandler(t *testing.T) {
 		{
 			"get one user by id",
 			user,
+			userId,
 			mappers.MapUserToGetUserResponse(user),
 			http.StatusOK,
 			nil,
@@ -321,6 +244,7 @@ func TestGetOneUserHandler(t *testing.T) {
 		{
 			"wrong path params",
 			user,
+			"userID",
 			mappers.MapUserToGetUserResponse(user),
 			http.StatusBadRequest,
 			&apperrors.CanNotBindErr,
@@ -328,6 +252,7 @@ func TestGetOneUserHandler(t *testing.T) {
 		{
 			"user not found by id",
 			user,
+			userId,
 			mappers.MapUserToGetUserResponse(user),
 			http.StatusBadRequest,
 			&apperrors.UserNotFoundErr,
@@ -338,12 +263,11 @@ func TestGetOneUserHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	userRepoMock := mocks.NewMockUserRepository(ctrl)
-	uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
-	uController := NewUserController(uInteractor)
-
 	for _, tc := range testTable {
 		t.Run(tc.scenario, func(t *testing.T) {
+			userRepoMock := mocks.NewMockUserRepository(ctrl)
+			uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
+			uController := NewUserController(uInteractor)
 
 			e := echo.New()
 			req := httptest.NewRequest(http.MethodGet, "/user/:id", nil)
@@ -351,12 +275,8 @@ func TestGetOneUserHandler(t *testing.T) {
 			c := e.NewContext(req, rec)
 			c.SetParamNames("id")
 
-			if tc.scenario == "wrong path params" {
-				c.SetParamValues("userId")
-			} else {
-				c.SetParamValues(userId)
-				userRepoMock.EXPECT().FindOneUserByID(ctx, tc.expectedUser.ID).Return(tc.expectedUser, tc.expectedError)
-			}
+			c.SetParamValues(tc.inputUserID)
+			userRepoMock.EXPECT().FindOneUserByID(ctx, tc.expectedUser.ID).Return(tc.expectedUser, tc.expectedError).AnyTimes()
 
 			err := uController.GetOneUserHandler(c)
 
@@ -381,7 +301,7 @@ func TestGetUsersHandler(t *testing.T) {
 
 	expectedPagination := &models.Pagination{
 		Limit: 5,
-		Page:  5,
+		Page:  1,
 		Sort:  "id desc",
 	}
 
@@ -451,7 +371,7 @@ func TestGetUsersHandler(t *testing.T) {
 				Sort:  "id desc",
 			},
 			fineUsers,
-			http.StatusBadRequest,
+			http.StatusForbidden,
 			&apperrors.WrongRoleErr,
 		},
 	}
@@ -460,12 +380,11 @@ func TestGetUsersHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	userRepoMock := mocks.NewMockUserRepository(ctrl)
-	uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
-	uController := NewUserController(uInteractor)
-
 	for _, tc := range testTable {
 		t.Run(tc.scenario, func(t *testing.T) {
+			userRepoMock := mocks.NewMockUserRepository(ctrl)
+			uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
+			uController := NewUserController(uInteractor)
 
 			e := echo.New()
 			q := make(url.Values)
@@ -487,6 +406,7 @@ func TestGetUsersHandler(t *testing.T) {
 			}
 
 			c.Set("user", tokenGenerator(tc.expectedUsers[0]))
+
 			err := uController.GetUsersHandler(c)
 			if err != nil {
 				apperrors.Is(err, tc.expectedError.(*apperrors.AppError))
@@ -512,29 +432,43 @@ func TestGetUsersHandler(t *testing.T) {
 
 func TestDeleteUserHandler(t *testing.T) {
 
+	expectedUserWithRoleUser := getTestUser()
+	expectedUserWithRoleUser.Role = "user"
+
 	testTable := []struct {
 		scenario      string
-		expectedID    int
+		expectedID    string
+		expectedUser  *models.User
 		httpCode      int
 		expectedError error
 	}{
 		{
 			"successfully deleted user",
-			1234,
+			"1234",
+			getTestUser(),
 			http.StatusOK,
 			nil,
 		},
 		{
 			"wrong path params",
-			0,
+			"userID",
+			getTestUser(),
 			http.StatusBadRequest,
 			&apperrors.CanNotBindErr,
 		},
 		{
 			"id is exsist",
-			12598,
+			"12598",
+			getTestUser(),
 			http.StatusInternalServerError,
 			&apperrors.CanNotDeleteUserErr,
+		},
+		{
+			"role have lack of rights",
+			"1234",
+			expectedUserWithRoleUser,
+			http.StatusForbidden,
+			&apperrors.WrongRoleErr,
 		},
 	}
 
@@ -542,12 +476,12 @@ func TestDeleteUserHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	userRepoMock := mocks.NewMockUserRepository(ctrl)
-	uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
-	uController := NewUserController(uInteractor)
-
 	for _, tc := range testTable {
 		t.Run(tc.scenario, func(t *testing.T) {
+			userRepoMock := mocks.NewMockUserRepository(ctrl)
+			uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
+			uController := NewUserController(uInteractor)
+
 			e := echo.New()
 
 			req := httptest.NewRequest(http.MethodDelete, "/users/:id", nil)
@@ -555,14 +489,11 @@ func TestDeleteUserHandler(t *testing.T) {
 			c := e.NewContext(req, rec)
 
 			c.SetParamNames("id")
+			c.SetParamValues(tc.expectedID)
+			c.Set("user", tokenGenerator())
 
-			if tc.scenario == "wrong path params" {
-				c.SetParamValues("userId")
-			} else {
-
-				c.SetParamValues(strconv.Itoa(tc.expectedID))
-				userRepoMock.EXPECT().DeleteUserByID(ctx, tc.expectedID).Return(tc.expectedError)
-			}
+			id, _ := strconv.Atoi(tc.expectedID)
+			userRepoMock.EXPECT().DeleteUserByID(ctx, id).Return(tc.expectedError).AnyTimes()
 
 			err := uController.DeleteUserHandler(c)
 
@@ -577,37 +508,7 @@ func TestDeleteUserHandler(t *testing.T) {
 	}
 }
 
-func TestOwnerProfileHandler(t *testing.T) {
-	now := time.Now()
-
-	testingHashedUserFunc := func(password string) string {
-		pwd := sha1.New()
-		pwd.Write([]byte(password))
-		pwd.Write([]byte("hash_salt"))
-		return fmt.Sprintf("%x", pwd.Sum(nil))
-	}
-
-	expectedUser := &models.User{
-		ID:        124,
-		UserName:  "JohnHall",
-		Role:      "admin",
-		FirstName: "John",
-		LastName:  "Hall",
-		Password:  testingHashedUserFunc("very12difficult()Password"),
-		CreatedAt: &now,
-		UpdatedAt: &now,
-	}
-
-	tokenGenerator := func(user *models.User) *jwt.Token {
-		claims := &interactor.AuthClaims{
-			User: user,
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * (time.Duration(1)))),
-			},
-		}
-
-		return jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	}
+func TestDeleteOwnerProfileHandler(t *testing.T) {
 
 	testTable := []struct {
 		scenario      string
@@ -640,7 +541,7 @@ func TestOwnerProfileHandler(t *testing.T) {
 			c := e.NewContext(req, rec)
 
 			userRepoMock.EXPECT().DeleteOwnUser(ctx, tc.expectedID).Return(tc.expectedError)
-			c.Set("user", tokenGenerator(expectedUser))
+			c.Set("user", tokenGenerator())
 			err := uController.DeleteOwnerProfileHandler(c)
 
 			if err != nil {
@@ -658,7 +559,7 @@ func TestUpdateUserHandler(t *testing.T) {
 
 	testTable := []struct {
 		scenario              string
-		expectedID            int
+		expectedID            string
 		expectedUpdateRequest string
 		expectedUser          *models.User
 		httpCode              int
@@ -666,7 +567,7 @@ func TestUpdateUserHandler(t *testing.T) {
 	}{
 		{
 			"successfully updated user",
-			1234,
+			"1234",
 			`{"user_name": "JohnHall", "role": "user", "first_name": "John", "last_name": "Hall"}`,
 			&models.User{
 				ID:        0,
@@ -680,7 +581,7 @@ func TestUpdateUserHandler(t *testing.T) {
 		},
 		{
 			"wrong path params",
-			0,
+			"userID",
 			`{}`,
 			&models.User{},
 			http.StatusBadRequest,
@@ -688,7 +589,7 @@ func TestUpdateUserHandler(t *testing.T) {
 		},
 		{
 			"wrong bind params",
-			1234,
+			"1234",
 			`{"user_namsdsdfe": "JohnHal, "passdfsword": "very12difficult()Password"}`,
 			&models.User{UserName: "JohnHall"},
 			http.StatusBadRequest,
@@ -696,7 +597,7 @@ func TestUpdateUserHandler(t *testing.T) {
 		},
 		{
 			"user has admin status",
-			1234,
+			"1234",
 			`{"user_name": "JohnHall", "role": "admin", "first_name": "John", "last_name": "Hall"}`,
 			&models.User{
 				ID:        0,
@@ -705,7 +606,7 @@ func TestUpdateUserHandler(t *testing.T) {
 				Role:      "admin",
 				LastName:  "Hall",
 			},
-			http.StatusBadRequest,
+			http.StatusInternalServerError,
 			&apperrors.CanNotUpdateErr,
 		},
 	}
@@ -728,14 +629,11 @@ func TestUpdateUserHandler(t *testing.T) {
 			c := e.NewContext(req, rec)
 
 			c.SetParamNames("id")
+			c.SetParamValues(tc.expectedID)
 
-			if tc.scenario == "wrong path params" {
-				c.SetParamValues("userId")
-			} else {
+			id, _ := strconv.Atoi(tc.expectedID)
 
-				c.SetParamValues(strconv.Itoa(tc.expectedID))
-				userRepoMock.EXPECT().UpdateUserByID(ctx, tc.expectedID, tc.expectedUser).Return(tc.expectedUser, tc.expectedError).AnyTimes()
-			}
+			userRepoMock.EXPECT().UpdateUserByID(ctx, id, tc.expectedUser).Return(tc.expectedUser, tc.expectedError).AnyTimes()
 
 			err := uController.UpdateUserHandler(c)
 
@@ -752,33 +650,9 @@ func TestUpdateUserHandler(t *testing.T) {
 
 func TestUpdateOwnerProfileHandler(t *testing.T) {
 
-	expectedUser := &models.User{
-		ID:        124,
-		UserName:  "JohnHall",
-		Role:      "user",
-		FirstName: "John",
-		LastName:  "Hall",
-		Password:  "very12difficult()Password",
-	}
+	inputUser := getTestUser()
+	inputUser.ID = 0
 
-	inputUser := &models.User{
-		UserName:  "JohnHall",
-		Role:      "user",
-		FirstName: "John",
-		LastName:  "Hall",
-		Password:  "very12difficult()Password",
-	}
-
-	tokenGenerator := func(user *models.User) *jwt.Token {
-		claims := &interactor.AuthClaims{
-			User: user,
-			RegisteredClaims: jwt.RegisteredClaims{
-				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * (time.Duration(1)))),
-			},
-		}
-
-		return jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	}
 	testTable := []struct {
 		scenario string
 
@@ -790,8 +664,8 @@ func TestUpdateOwnerProfileHandler(t *testing.T) {
 	}{
 		{
 			"successfully updated profile",
-			`{"user_name": "JohnHall", "role": "user", "first_name": "John", "last_name": "Hall", "password": "very12difficult()Password"}`,
-			expectedUser,
+			`{"user_name": "JohnHall", "role": "admin", "first_name": "John", "last_name": "Hall", "password": "very12difficult()Password"}`,
+			getTestUser(),
 			inputUser,
 			http.StatusOK,
 			nil,
@@ -800,7 +674,7 @@ func TestUpdateOwnerProfileHandler(t *testing.T) {
 		{
 			"wrong bind params",
 			`{"user_name": ", "last_name": "Hall", "passwordy12difficult()Password"}`,
-			expectedUser,
+			getTestUser(),
 			inputUser,
 			http.StatusBadRequest,
 			&apperrors.CanNotBindErr,
@@ -823,7 +697,7 @@ func TestUpdateOwnerProfileHandler(t *testing.T) {
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-			c.Set("user", tokenGenerator(expectedUser))
+			c.Set("user", tokenGenerator())
 
 			userRepoMock.EXPECT().UpdateOwnUser(ctx, int(tc.expectedUser.ID), tc.inputUser).Return(tc.expectedUser, tc.expectedError).AnyTimes()
 
@@ -838,4 +712,34 @@ func TestUpdateOwnerProfileHandler(t *testing.T) {
 
 		})
 	}
+}
+
+func hashingUserFunc(password string) string {
+	pwd := sha1.New()
+	pwd.Write([]byte(password))
+	pwd.Write([]byte("hash_salt"))
+	return fmt.Sprintf("%x", pwd.Sum(nil))
+}
+
+func getTestUser() *models.User {
+
+	return &models.User{
+		ID:        124,
+		UserName:  "JohnHall",
+		Role:      "admin",
+		FirstName: "John",
+		LastName:  "Hall",
+		Password:  "very12difficult()Password",
+	}
+}
+
+func tokenGenerator() *jwt.Token {
+	claims := &interactor.AuthClaims{
+		User: getTestUser(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * (time.Duration(1)))),
+		},
+	}
+
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 }
