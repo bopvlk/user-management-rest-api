@@ -2,7 +2,7 @@ package router
 
 import (
 	"git.foxminded.com.ua/3_REST_API/interal/config"
-	customMiddleware "git.foxminded.com.ua/3_REST_API/interal/infrastructure/middleware"
+	appMiddleware "git.foxminded.com.ua/3_REST_API/interal/infrastructure/middleware"
 	"git.foxminded.com.ua/3_REST_API/interal/interface/controller"
 	"git.foxminded.com.ua/3_REST_API/interal/usecase/interactor"
 	v "git.foxminded.com.ua/3_REST_API/interal/validator"
@@ -33,9 +33,9 @@ func NewRouter(e *echo.Echo, config *config.Config, appController *controller.Ap
 	}))
 
 	restrictedGroup.GET("/user/:id", func(c echo.Context) error { return appController.GetOneUserHandler(c) })
-	restrictedGroup.GET("/users", func(c echo.Context) error { return appController.GetUsersHandler(c) }, customMiddleware.ModeratorRoleMiddleware)
-	restrictedGroup.DELETE("/user/:id", func(c echo.Context) error { return appController.DeleteUserHandler(c) }, customMiddleware.AdminRoleMiddleware)
-	restrictedGroup.PUT("/user/:id", func(c echo.Context) error { return appController.UpdateUserHandler(c) }, customMiddleware.AdminRoleMiddleware)
+	restrictedGroup.GET("/users", func(c echo.Context) error { return appController.GetUsersHandler(c) }, appMiddleware.ModeratorRoleMiddleware)
+	restrictedGroup.DELETE("/user/:id", func(c echo.Context) error { return appController.DeleteUserHandler(c) }, appMiddleware.AdminRoleMiddleware)
+	restrictedGroup.PUT("/user/:id", func(c echo.Context) error { return appController.UpdateUserHandler(c) }, appMiddleware.AdminRoleMiddleware)
 	restrictedGroup.DELETE("/user/profile", func(c echo.Context) error { return appController.DeleteOwnerProfileHandler(c) })
 	restrictedGroup.PUT("/user/profile", func(c echo.Context) error { return appController.UpdateOwnerProfileHandler(c) })
 

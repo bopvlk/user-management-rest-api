@@ -94,17 +94,12 @@ func (ur *userRepository) DeleteOwnUser(ctx context.Context, id int) error {
 }
 
 func (ur *userRepository) UpdateUserByID(ctx context.Context, id int, user *models.User) (*models.User, error) {
-	tempUser := &models.User{}
-	tx := ur.db.WithContext(ctx).Where("id = ?", id).First(&tempUser)
-	if tx.Error != nil {
-		return nil, tx.Error
+	if err := ur.db.WithContext(ctx).Where("id = ?", id).Updates(&user).First(&user).Error; err != nil {
+		return nil, err
 	}
-	if tempUser.Role == "admin" {
-		return nil, errors.New("admin user not allowed to update")
-	}
-	tx.Updates(&user).First(&user)
 	return user, nil
 }
+
 func (ur *userRepository) UpdateOwnUser(ctx context.Context, id int, user *models.User) (*models.User, error) {
 
 	tx := ur.db.WithContext(ctx).Where("id = ?", id).Updates(&user).First(&user)
