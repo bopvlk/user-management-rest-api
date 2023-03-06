@@ -93,11 +93,6 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 }
 
 func (uc *userController) GetUsersHandler(c echo.Context) error {
-	if GetUserClaims(c).User.Role == "user" {
-		appErr := &apperrors.WrongRoleErr
-		c.Logger().Error(appErr.Error())
-		return mappers.MapAppErrorToHTTPError(appErr)
-	}
 
 	name := GetUserClaims(c).User.UserName
 	pagination := mappers.MapContextToPagination(c)
