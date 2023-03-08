@@ -9,8 +9,9 @@ import (
 	"git.foxminded.com.ua/3_REST_API/interal/domain/mappers"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/requests"
 	"git.foxminded.com.ua/3_REST_API/interal/usecase/interactor"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
 )
 
 type userController struct {
@@ -32,7 +33,7 @@ func NewUserController(us interactor.UserInteractor) UserController {
 	return &userController{us}
 }
 
-func (uc *userController) SignUpHandler(c echo.Context) error {
+func (uC *userController) SignUpHandler(c echo.Context) error {
 	var signUpRequest requests.SignUpRequest
 	if err := c.Bind(&signUpRequest); err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
@@ -45,7 +46,7 @@ func (uc *userController) SignUpHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(err)
 	}
 
-	duration, token, err := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
+	duration, token, err := uC.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
 	if err != nil {
 		c.Logger().Error(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -56,7 +57,7 @@ func (uc *userController) SignUpHandler(c echo.Context) error {
 	return c.JSON(http.StatusCreated, requests.SignUpInResponse{Message: "You are logged in!"})
 }
 
-func (uc *userController) SignInHandler(c echo.Context) error {
+func (uC *userController) SignInHandler(c echo.Context) error {
 	var signInRequest requests.SignInRequest
 	if err := c.Bind(&signInRequest); err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
@@ -64,7 +65,7 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	duration, token, err := uc.userInteractor.SignIn(c.Request().Context(), signInRequest.UserName, signInRequest.Password)
+	duration, token, err := uC.userInteractor.SignIn(c.Request().Context(), signInRequest.UserName, signInRequest.Password)
 	if err != nil {
 		c.Logger().Error(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -75,7 +76,7 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, requests.SignUpInResponse{Message: "You are logged in!"})
 }
 
-func (uc *userController) GetOneUserHandler(c echo.Context) error {
+func (uC *userController) GetOneUserHandler(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
@@ -83,7 +84,7 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	user, err := uc.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
+	user, err := uC.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
 	if err != nil {
 		c.Logger().Error(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -92,11 +93,16 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapUserToGetUserResponse(user))
 }
 
-func (uc *userController) GetUsersHandler(c echo.Context) error {
+func (uC *userController) GetUsersHandler(c echo.Context) error {
+	claims, err := GetUserClaims(c)
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+	name := claims.User.UserName
 
-	name := GetUserClaims(c).User.UserName
 	pagination := mappers.MapContextToPagination(c)
-	pagination, users, err := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
+	pagination, users, err := uC.userInteractor.FindSigners(c.Request().Context(), pagination)
 	if err != nil {
 		c.Logger().Error(err)
 		return mappers.MapAppErrorToHTTPError(err)
@@ -117,7 +123,7 @@ func (uc *userController) GetUsersHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapPaginationAndUsersToGetUsersResponse(users, pagination, name))
 }
 
-func (uc *userController) DeleteUserHandler(c echo.Context) error {
+func (uC *userController) DeleteUserHandler(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
@@ -125,7 +131,7 @@ func (uc *userController) DeleteUserHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	if err := uc.userInteractor.DeleteSignerByID(c.Request().Context(), id); err != nil {
+	if err := uC.userInteractor.DeleteSignerByID(c.Request().Context(), id); err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
 	}
@@ -133,10 +139,15 @@ func (uc *userController) DeleteUserHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, fmt.Sprintf("User with id:%d is deleted", id))
 }
 
-func (uc *userController) DeleteOwnerProfileHandler(c echo.Context) error {
-	id := int(GetUserClaims(c).User.ID)
+func (uC *userController) DeleteOwnerProfileHandler(c echo.Context) error {
+	claims, err := GetUserClaims(c)
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+	id := int(claims.User.ID)
 
-	if err := uc.userInteractor.DeleteOwnSignIn(c.Request().Context(), id); err != nil {
+	if err := uC.userInteractor.DeleteOwnSignIn(c.Request().Context(), id); err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
 	}
@@ -144,7 +155,7 @@ func (uc *userController) DeleteOwnerProfileHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, "Your profile is deleted")
 }
 
-func (uc *userController) UpdateUserHandler(c echo.Context) error {
+func (uC *userController) UpdateUserHandler(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
@@ -159,7 +170,7 @@ func (uc *userController) UpdateUserHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	user, err := uc.userInteractor.UpdateSignersByID(c.Request().Context(), id, mappers.MapUpdateRequestToUser(&updateRequest))
+	user, err := uC.userInteractor.UpdateSignersByID(c.Request().Context(), id, mappers.MapUpdateRequestToUser(&updateRequest))
 	if err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -168,8 +179,13 @@ func (uc *userController) UpdateUserHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
 }
 
-func (uc *userController) UpdateOwnerProfileHandler(c echo.Context) error {
-	id := int(GetUserClaims(c).User.ID)
+func (uC *userController) UpdateOwnerProfileHandler(c echo.Context) error {
+	claims, err := GetUserClaims(c)
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+	id := int(claims.User.ID)
 
 	var updateOwnRequest requests.UpdateOwnRequest
 	if err := c.Bind(&updateOwnRequest); err != nil {
@@ -178,7 +194,7 @@ func (uc *userController) UpdateOwnerProfileHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	user, err := uc.userInteractor.UpdateOwnSignIn(c.Request().Context(), id, mappers.MapUpdateOwnRequestToUser(&updateOwnRequest))
+	user, err := uC.userInteractor.UpdateOwnSignIn(c.Request().Context(), id, mappers.MapUpdateOwnRequestToUser(&updateOwnRequest))
 	if err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -187,8 +203,20 @@ func (uc *userController) UpdateOwnerProfileHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
 }
 
-func GetUserClaims(c echo.Context) *interactor.AuthClaims {
-	return c.Get("user").(*jwt.Token).Claims.(*interactor.AuthClaims)
+func GetUserClaims(c echo.Context) (*interactor.AuthClaims, error) {
+	cookie, err := c.Cookie("Authorization")
+	if err != nil {
+		return nil, apperrors.SomeCookieErr.AppendMessage(err)
+	}
+
+	jwtToken, err := jwt.ParseWithClaims(cookie.Value, &interactor.AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return viper.GetString("SIGNING_KEY"), nil
+	})
+	if err != nil {
+		return nil, apperrors.CanNotParseTokenErr.AppendMessage(err)
+	}
+
+	return jwtToken.Claims.(*interactor.AuthClaims), nil
 }
 
 func saveAuthcookie(c echo.Context, token string, duration int) {

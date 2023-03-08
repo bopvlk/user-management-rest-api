@@ -11,7 +11,12 @@ import (
 
 func AdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		claims := controller.GetUserClaims(c)
+		claims, err := controller.GetUserClaims(c)
+		if err != nil {
+			c.Logger().Error(err.Error())
+			return mappers.MapAppErrorToHTTPError(err)
+		}
+
 		switch {
 		case claims.User.Role == "user":
 			appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'user'"))
@@ -28,7 +33,12 @@ func AdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 func ModeratorRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		claims := controller.GetUserClaims(c)
+		claims, err := controller.GetUserClaims(c)
+		if err != nil {
+			c.Logger().Error(err.Error())
+			return mappers.MapAppErrorToHTTPError(err)
+		}
+
 		switch {
 		case claims.User.Role == "user":
 			appErr := apperrors.WrongRoleErr.AppendMessage(errors.New("you are have a role: 'user'"))

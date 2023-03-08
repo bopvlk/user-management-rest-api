@@ -32,7 +32,13 @@ var (
 
 	CanNotCreateTokenErr = AppError{
 		Message:  "can't create token",
-		Code:     "TOKEN_ERR",
+		Code:     "TOKEN_CREATE_ERR",
+		HTTPCode: http.StatusInternalServerError,
+	}
+
+	CanNotParseTokenErr = AppError{
+		Message:  "can't parse token",
+		Code:     "TOKEN_PARSE_ERR",
 		HTTPCode: http.StatusInternalServerError,
 	}
 
