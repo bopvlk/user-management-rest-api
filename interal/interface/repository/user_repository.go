@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"math"
 
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
@@ -15,7 +16,10 @@ type UserRepository interface {
 	FindUsers(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error)
 	FindOneUserByID(ctx context.Context, id uint) (*models.User, error)
 	FindOneUserByUserNameAndPassword(ctx context.Context, username, password string) (*models.User, error)
-	DeleteUser(ctx context.Context, user *models.User) error
+	DeleteUserByID(ctx context.Context, id int) error
+	DeleteOwnUser(ctx context.Context, id int) error
+	UpdateUserByID(ctx context.Context, id int, user *models.User) (*models.User, error)
+	UpdateOwnUser(ctx context.Context, id int, user *models.User) (*models.User, error)
 }
 
 type userRepository struct {
@@ -52,7 +56,7 @@ func (ur *userRepository) FindOneUserByID(ctx context.Context, id uint) (*models
 
 func (ur *userRepository) FindOneUserByUserNameAndPassword(ctx context.Context, username, password string) (*models.User, error) {
 	user := models.User{}
-	if err := ur.db.WithContext(ctx).Where("username = ?", username).Where("password = ?", password).First(&user).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Where("password = ?", password).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -65,9 +69,43 @@ func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) (*m
 	return user, nil
 }
 
-func (ur *userRepository) DeleteUser(ctx context.Context, user *models.User) error {
-	if err := ur.db.WithContext(ctx).Delete(&user).Error; err != nil {
+func (ur *userRepository) DeleteUserByID(ctx context.Context, id int) error {
+	user := &models.User{}
+	tx := ur.db.WithContext(ctx).Where("id = ?", id).First(&user)
+	if tx.Error != nil {
+		return tx.Error
+	}
+	if user.Role == "admin" {
+		return errors.New("admin user not allowed to delete")
+	}
+
+	if err := ur.db.WithContext(ctx).Delete(&models.User{}, id).Error; err != nil {
 		return err
 	}
 	return nil
+}
+
+func (ur *userRepository) DeleteOwnUser(ctx context.Context, id int) error {
+
+	if err := ur.db.WithContext(ctx).Delete(&models.User{}, id).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *userRepository) UpdateUserByID(ctx context.Context, id int, user *models.User) (*models.User, error) {
+	if err := ur.db.WithContext(ctx).Where("id = ?", id).Updates(&user).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (ur *userRepository) UpdateOwnUser(ctx context.Context, id int, user *models.User) (*models.User, error) {
+
+	tx := ur.db.WithContext(ctx).Where("id = ?", id).Updates(&user).First(&user)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return user, nil
 }

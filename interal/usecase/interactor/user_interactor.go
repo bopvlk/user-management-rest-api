@@ -16,9 +16,12 @@ import (
 type UserInteractor interface {
 	SignUp(ctx context.Context, user *models.User) (int, string, error)
 	SignIn(ctx context.Context, name, password string) (int, string, error)
-	DeleteSigner(ctx context.Context, user *models.User) error
 	FindOneSigner(ctx context.Context, id uint) (*models.User, error)
 	FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error)
+	DeleteSignerByID(ctx context.Context, id int) error
+	DeleteOwnSignIn(ctx context.Context, id int) error
+	UpdateSignersByID(ctx context.Context, id int, user *models.User) (*models.User, error)
+	UpdateOwnSignIn(ctx context.Context, id int, user *models.User) (*models.User, error)
 }
 
 type AuthClaims struct {
@@ -81,9 +84,20 @@ func (uI *userInteractor) SignIn(ctx context.Context, name, password string) (in
 	return uI.expireDuration, token, nil
 }
 
-func (uI *userInteractor) DeleteSigner(ctx context.Context, user *models.User) error {
+func (uI *userInteractor) DeleteSignerByID(ctx context.Context, id int) error {
 
-	if err := uI.userRepo.DeleteUser(ctx, user); err != nil {
+	if err := uI.userRepo.DeleteUserByID(ctx, id); err != nil {
+		if err == &apperrors.WrongRoleErr {
+			return err
+		}
+		return apperrors.CanNotDeleteUserErr.AppendMessage(err)
+	}
+	return nil
+}
+
+func (uI *userInteractor) DeleteOwnSignIn(ctx context.Context, id int) error {
+
+	if err := uI.userRepo.DeleteOwnUser(ctx, id); err != nil {
 		return apperrors.CanNotDeleteUserErr.AppendMessage(err)
 	}
 	return nil
@@ -98,12 +112,33 @@ func (uI *userInteractor) FindOneSigner(ctx context.Context, id uint) (*models.U
 }
 
 func (uI *userInteractor) FindSigners(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error) {
-
 	pagination, users, err := uI.userRepo.FindUsers(ctx, pagination)
 	if err != nil {
+		if err == &apperrors.WrongRoleErr {
+			return nil, nil, err
+		}
 		return nil, nil, apperrors.PaginationErr.AppendMessage(err)
 	}
+
 	return pagination, users, nil
+}
+
+func (uI *userInteractor) UpdateSignersByID(ctx context.Context, id int, user *models.User) (*models.User, error) {
+	user, err := uI.userRepo.UpdateUserByID(ctx, id, user)
+	if err != nil {
+		return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
+	}
+
+	return user, nil
+}
+
+func (uI *userInteractor) UpdateOwnSignIn(ctx context.Context, id int, user *models.User) (*models.User, error) {
+	user, err := uI.userRepo.UpdateOwnUser(ctx, id, user)
+	if err != nil {
+		return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
+	}
+
+	return user, nil
 }
 
 func (uI *userInteractor) hashing(password string) (string, error) {

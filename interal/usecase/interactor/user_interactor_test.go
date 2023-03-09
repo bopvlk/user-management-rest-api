@@ -216,8 +216,65 @@ func TestDeleteSigner(t *testing.T) {
 	for _, tc := range testTable {
 		t.Run(tc.scenario, func(t *testing.T) {
 			ctx := context.Background()
-			userRepoMock.EXPECT().DeleteUser(ctx, tc.expectedUser).Return(tc.expectedError)
-			err := uInteractor.DeleteSigner(ctx, tc.expectedUser)
+			userRepoMock.EXPECT().DeleteUserByID(ctx, int(tc.expectedUser.ID)).Return(tc.expectedError)
+			err := uInteractor.DeleteSignerByID(ctx, int(tc.expectedUser.ID))
+			if err != nil {
+
+				if tc.expectedError != nil && apperrors.Is(err, tc.expectedError.(*apperrors.AppError)) {
+					return
+				}
+
+				t.Fatal(err)
+			}
+
+		})
+	}
+
+}
+
+func TestDeleteOwnSignIn(t *testing.T) {
+	now := time.Now()
+	testTable := []struct {
+		scenario      string
+		expectedUser  *models.User
+		expectedError error
+	}{
+		{
+			"delete user",
+			&models.User{
+				ID:        121,
+				UserName:  "JohnHall",
+				FirstName: "John",
+				LastName:  "Hall",
+				Password:  "1231",
+				CreatedAt: &now,
+				UpdatedAt: &now,
+			},
+			nil,
+		},
+		{
+			"can not delete user",
+			&models.User{},
+			&apperrors.CanNotDeleteUserErr,
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	userRepoMock := mocks.NewMockUserRepository(ctrl)
+	uInteractor := &userInteractor{
+		userRepo:       userRepoMock,
+		hashSalt:       "",
+		signingKey:     nil,
+		expireDuration: 0,
+	}
+
+	for _, tc := range testTable {
+		t.Run(tc.scenario, func(t *testing.T) {
+			ctx := context.Background()
+			userRepoMock.EXPECT().DeleteOwnUser(ctx, int(tc.expectedUser.ID)).Return(tc.expectedError)
+			err := uInteractor.DeleteOwnSignIn(ctx, int(tc.expectedUser.ID))
 			if err != nil {
 
 				if tc.expectedError != nil && apperrors.Is(err, tc.expectedError.(*apperrors.AppError)) {
@@ -455,6 +512,148 @@ func TestHashing(t *testing.T) {
 			assert.Equal(t, hashedPassword, testCase.expectedHashedPassword)
 		})
 
+	}
+
+}
+
+func TestUpdateSignersByID(t *testing.T) {
+	now := time.Now()
+
+	testTable := []struct {
+		scenario      string
+		expectedUser  *models.User
+		myID          int
+		expectedError error
+	}{
+		{
+			"successfully update user",
+			&models.User{
+				ID:        121,
+				UserName:  "JohnHall",
+				Role:      "user",
+				FirstName: "John",
+				LastName:  "Hall",
+				Password:  "1231",
+				CreatedAt: &now,
+				UpdatedAt: &now,
+			},
+			121,
+			nil,
+		},
+		{
+			"can not update user, because user role is 'admin'",
+			&models.User{
+				ID:        121,
+				UserName:  "JohnHall",
+				Role:      "admin",
+				FirstName: "John",
+				LastName:  "Hall",
+				Password:  "1231",
+				CreatedAt: &now,
+				UpdatedAt: &now,
+			},
+			121,
+			&apperrors.CanNotUpdateErr,
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	userRepoMock := mocks.NewMockUserRepository(ctrl)
+	uInteractor := &userInteractor{
+		userRepo:       userRepoMock,
+		hashSalt:       "",
+		signingKey:     nil,
+		expireDuration: 0,
+	}
+
+	for _, tc := range testTable {
+		t.Run(tc.scenario, func(t *testing.T) {
+			ctx := context.Background()
+			userRepoMock.EXPECT().UpdateUserByID(ctx, int(tc.expectedUser.ID), tc.expectedUser).Return(tc.expectedUser, tc.expectedError)
+			_, err := uInteractor.UpdateSignersByID(ctx, int(tc.expectedUser.ID), tc.expectedUser)
+			if err != nil {
+
+				if tc.expectedError != nil && apperrors.Is(err, tc.expectedError.(*apperrors.AppError)) {
+					return
+				}
+
+				t.Fatal(err)
+			}
+
+		})
+	}
+
+}
+
+func TestUpdateOwnSignIn(t *testing.T) {
+	now := time.Now()
+
+	testTable := []struct {
+		scenario      string
+		expectedUser  *models.User
+		myID          int
+		expectedError error
+	}{
+		{
+			"successfully update user",
+			&models.User{
+				ID:        121,
+				UserName:  "JohnHall",
+				Role:      "user",
+				FirstName: "John",
+				LastName:  "Hall",
+				Password:  "1231",
+				CreatedAt: &now,
+				UpdatedAt: &now,
+			},
+			121,
+			nil,
+		},
+		{
+			"can not update user, because user role is 'admin'",
+			&models.User{
+				ID:        121,
+				UserName:  "JohnHall",
+				Role:      "admin",
+				FirstName: "John",
+				LastName:  "Hall",
+				Password:  "1231",
+				CreatedAt: &now,
+				UpdatedAt: &now,
+			},
+			121,
+			&apperrors.CanNotUpdateErr,
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	userRepoMock := mocks.NewMockUserRepository(ctrl)
+	uInteractor := &userInteractor{
+		userRepo:       userRepoMock,
+		hashSalt:       "",
+		signingKey:     nil,
+		expireDuration: 0,
+	}
+
+	for _, tc := range testTable {
+		t.Run(tc.scenario, func(t *testing.T) {
+			ctx := context.Background()
+			userRepoMock.EXPECT().UpdateOwnUser(ctx, int(tc.expectedUser.ID), tc.expectedUser).Return(tc.expectedUser, tc.expectedError)
+			_, err := uInteractor.UpdateOwnSignIn(ctx, int(tc.expectedUser.ID), tc.expectedUser)
+			if err != nil {
+
+				if tc.expectedError != nil && apperrors.Is(err, tc.expectedError.(*apperrors.AppError)) {
+					return
+				}
+
+				t.Fatal(err)
+			}
+
+		})
 	}
 
 }

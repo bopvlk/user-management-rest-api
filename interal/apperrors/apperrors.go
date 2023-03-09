@@ -32,7 +32,13 @@ var (
 
 	CanNotCreateTokenErr = AppError{
 		Message:  "can't create token",
-		Code:     "TOKEN_ERR",
+		Code:     "TOKEN_CREATE_ERR",
+		HTTPCode: http.StatusInternalServerError,
+	}
+
+	CanNotParseTokenErr = AppError{
+		Message:  "can't parse token",
+		Code:     "TOKEN_PARSE_ERR",
 		HTTPCode: http.StatusInternalServerError,
 	}
 
@@ -86,6 +92,18 @@ var (
 	SomeCookieErr = AppError{
 		Message:  "couldn't through out cookie",
 		Code:     "COOKIE_ERR",
+		HTTPCode: http.StatusInternalServerError,
+	}
+
+	WrongRoleErr = AppError{
+		Message:  "you couldn't do this request. you shoud change the role",
+		Code:     "ROLE_ERR",
+		HTTPCode: http.StatusForbidden,
+	}
+
+	CanNotUpdateErr = AppError{
+		Message:  "couldn't update the user",
+		Code:     "UPDATE_ERR",
 		HTTPCode: http.StatusInternalServerError,
 	}
 )

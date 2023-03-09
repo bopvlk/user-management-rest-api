@@ -9,8 +9,9 @@ import (
 	"git.foxminded.com.ua/3_REST_API/interal/domain/mappers"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/requests"
 	"git.foxminded.com.ua/3_REST_API/interal/usecase/interactor"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
 )
 
 type userController struct {
@@ -23,13 +24,16 @@ type UserController interface {
 	GetUsersHandler(ctx echo.Context) error
 	SignInHandler(c echo.Context) error
 	DeleteUserHandler(c echo.Context) error
+	DeleteOwnerProfileHandler(c echo.Context) error
+	UpdateUserHandler(c echo.Context) error
+	UpdateOwnerProfileHandler(c echo.Context) error
 }
 
 func NewUserController(us interactor.UserInteractor) UserController {
 	return &userController{us}
 }
 
-func (uc *userController) SignUpHandler(c echo.Context) error {
+func (uC *userController) SignUpHandler(c echo.Context) error {
 	var signUpRequest requests.SignUpRequest
 	if err := c.Bind(&signUpRequest); err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
@@ -42,7 +46,7 @@ func (uc *userController) SignUpHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(err)
 	}
 
-	duration, token, err := uc.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
+	duration, token, err := uC.userInteractor.SignUp(c.Request().Context(), mappers.MapSignUpRequestToUser(&signUpRequest))
 	if err != nil {
 		c.Logger().Error(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -50,10 +54,10 @@ func (uc *userController) SignUpHandler(c echo.Context) error {
 
 	saveAuthcookie(c, token, duration)
 
-	return c.JSON(http.StatusCreated, requests.SignUpInResponse{Token: token, Message: "You are logged in!"})
+	return c.JSON(http.StatusCreated, requests.SignUpInResponse{Message: "You are logged in!"})
 }
 
-func (uc *userController) SignInHandler(c echo.Context) error {
+func (uC *userController) SignInHandler(c echo.Context) error {
 	var signInRequest requests.SignInRequest
 	if err := c.Bind(&signInRequest); err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
@@ -61,7 +65,7 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	duration, token, err := uc.userInteractor.SignIn(c.Request().Context(), signInRequest.UserName, signInRequest.Password)
+	duration, token, err := uC.userInteractor.SignIn(c.Request().Context(), signInRequest.UserName, signInRequest.Password)
 	if err != nil {
 		c.Logger().Error(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -69,10 +73,10 @@ func (uc *userController) SignInHandler(c echo.Context) error {
 
 	saveAuthcookie(c, token, duration)
 
-	return c.JSON(http.StatusOK, requests.SignUpInResponse{Token: token, Message: "You are logged in!"})
+	return c.JSON(http.StatusOK, requests.SignUpInResponse{Message: "You are logged in!"})
 }
 
-func (uc *userController) GetOneUserHandler(c echo.Context) error {
+func (uC *userController) GetOneUserHandler(c echo.Context) error {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		appErr := apperrors.CanNotBindErr.AppendMessage(err)
@@ -80,7 +84,7 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	user, err := uc.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
+	user, err := uC.userInteractor.FindOneSigner(c.Request().Context(), uint(id))
 	if err != nil {
 		c.Logger().Error(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -89,10 +93,16 @@ func (uc *userController) GetOneUserHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapUserToGetUserResponse(user))
 }
 
-func (uc *userController) GetUsersHandler(c echo.Context) error {
-	name := getUserClaims(c).User.UserName
+func (uC *userController) GetUsersHandler(c echo.Context) error {
+	claims, err := GetUserClaims(c)
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+	name := claims.User.UserName
+
 	pagination := mappers.MapContextToPagination(c)
-	pagination, users, err := uc.userInteractor.FindSigners(c.Request().Context(), pagination)
+	pagination, users, err := uC.userInteractor.FindSigners(c.Request().Context(), pagination)
 	if err != nil {
 		c.Logger().Error(err)
 		return mappers.MapAppErrorToHTTPError(err)
@@ -113,27 +123,100 @@ func (uc *userController) GetUsersHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapPaginationAndUsersToGetUsersResponse(users, pagination, name))
 }
 
-func (uc *userController) DeleteUserHandler(c echo.Context) error {
-	user := getUserClaims(c).User
+func (uC *userController) DeleteUserHandler(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
 
-	if err := uc.userInteractor.DeleteSigner(c.Request().Context(), user); err != nil {
+	if err := uC.userInteractor.DeleteSignerByID(c.Request().Context(), id); err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
 	}
-	cookie, err := c.Cookie("Authorization")
-	if err != nil {
-		c.Logger().Warn(err.Error())
-		appErr := apperrors.SomeCookieErr.AppendMessage(err)
-		return mappers.MapAppErrorToHTTPError(appErr)
-	}
-	cookie.MaxAge = -1
-	c.SetCookie(cookie)
 
-	return c.JSON(http.StatusOK, fmt.Sprintf("User %s with id:%d is deleted", user.UserName, user.ID))
+	return c.JSON(http.StatusOK, fmt.Sprintf("User with id:%d is deleted", id))
 }
 
-func getUserClaims(c echo.Context) *interactor.AuthClaims {
-	return c.Get("user").(*jwt.Token).Claims.(*interactor.AuthClaims)
+func (uC *userController) DeleteOwnerProfileHandler(c echo.Context) error {
+	claims, err := GetUserClaims(c)
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+	id := int(claims.User.ID)
+
+	if err := uC.userInteractor.DeleteOwnSignIn(c.Request().Context(), id); err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, "Your profile is deleted")
+}
+
+func (uC *userController) UpdateUserHandler(c echo.Context) error {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
+
+	var updateRequest requests.UpdateRequest
+	if err := c.Bind(&updateRequest); err != nil {
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
+
+	user, err := uC.userInteractor.UpdateSignersByID(c.Request().Context(), id, mappers.MapUpdateRequestToUser(&updateRequest))
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
+}
+
+func (uC *userController) UpdateOwnerProfileHandler(c echo.Context) error {
+	claims, err := GetUserClaims(c)
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+	id := int(claims.User.ID)
+
+	var updateOwnRequest requests.UpdateOwnRequest
+	if err := c.Bind(&updateOwnRequest); err != nil {
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
+	}
+
+	user, err := uC.userInteractor.UpdateOwnSignIn(c.Request().Context(), id, mappers.MapUpdateOwnRequestToUser(&updateOwnRequest))
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
+}
+
+func GetUserClaims(c echo.Context) (*interactor.AuthClaims, error) {
+	cookie, err := c.Cookie("Authorization")
+	if err != nil {
+		return nil, apperrors.SomeCookieErr.AppendMessage(err)
+	}
+
+	jwtToken, err := jwt.ParseWithClaims(cookie.Value, &interactor.AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return viper.GetString("SIGNING_KEY"), nil
+	})
+	if err != nil {
+		return nil, apperrors.CanNotParseTokenErr.AppendMessage(err)
+	}
+
+	return jwtToken.Claims.(*interactor.AuthClaims), nil
 }
 
 func saveAuthcookie(c echo.Context, token string, duration int) {
