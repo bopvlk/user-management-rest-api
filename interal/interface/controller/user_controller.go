@@ -9,9 +9,8 @@ import (
 	"git.foxminded.com.ua/3_REST_API/interal/domain/mappers"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/requests"
 	"git.foxminded.com.ua/3_REST_API/interal/usecase/interactor"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/labstack/echo/v4"
-	"github.com/spf13/viper"
 )
 
 type userController struct {
@@ -27,6 +26,7 @@ type UserController interface {
 	DeleteOwnerProfileHandler(c echo.Context) error
 	UpdateUserHandler(c echo.Context) error
 	UpdateOwnerProfileHandler(c echo.Context) error
+	RateHandler(c echo.Context) error
 }
 
 func NewUserController(us interactor.UserInteractor) UserController {
@@ -94,11 +94,8 @@ func (uC *userController) GetOneUserHandler(c echo.Context) error {
 }
 
 func (uC *userController) GetUsersHandler(c echo.Context) error {
-	claims, err := GetUserClaims(c)
-	if err != nil {
-		c.Logger().Warn(err.Error())
-		return mappers.MapAppErrorToHTTPError(err)
-	}
+	claims := GetUserClaims(c)
+
 	name := claims.User.UserName
 
 	pagination := mappers.MapContextToPagination(c)
@@ -140,11 +137,8 @@ func (uC *userController) DeleteUserHandler(c echo.Context) error {
 }
 
 func (uC *userController) DeleteOwnerProfileHandler(c echo.Context) error {
-	claims, err := GetUserClaims(c)
-	if err != nil {
-		c.Logger().Warn(err.Error())
-		return mappers.MapAppErrorToHTTPError(err)
-	}
+	claims := GetUserClaims(c)
+
 	id := int(claims.User.ID)
 
 	if err := uC.userInteractor.DeleteOwnSignIn(c.Request().Context(), id); err != nil {
@@ -180,11 +174,8 @@ func (uC *userController) UpdateUserHandler(c echo.Context) error {
 }
 
 func (uC *userController) UpdateOwnerProfileHandler(c echo.Context) error {
-	claims, err := GetUserClaims(c)
-	if err != nil {
-		c.Logger().Warn(err.Error())
-		return mappers.MapAppErrorToHTTPError(err)
-	}
+	claims := GetUserClaims(c)
+
 	id := int(claims.User.ID)
 
 	var updateOwnRequest requests.UpdateOwnRequest
@@ -203,20 +194,32 @@ func (uC *userController) UpdateOwnerProfileHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
 }
 
-func GetUserClaims(c echo.Context) (*interactor.AuthClaims, error) {
-	cookie, err := c.Cookie("Authorization")
-	if err != nil {
-		return nil, apperrors.SomeCookieErr.AppendMessage(err)
+func (uC *userController) RateHandler(c echo.Context) error {
+	username := c.Param("username")
+	if username == GetUserClaims(c).User.UserName {
+		err := &apperrors.CanNotRateYorself
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
 	}
 
-	jwtToken, err := jwt.ParseWithClaims(cookie.Value, &interactor.AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return viper.GetString("SIGNING_KEY"), nil
-	})
-	if err != nil {
-		return nil, apperrors.CanNotParseTokenErr.AppendMessage(err)
+	var rateRequest requests.RateRequest
+	if err := c.Bind(&rateRequest); err != nil {
+		appErr := apperrors.CanNotBindErr.AppendMessage(err)
+		c.Logger().Error(err.Error())
+		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	return jwtToken.Claims.(*interactor.AuthClaims), nil
+	user, err := uC.userInteractor.RateSign(c.Request().Context(), username, rateRequest.Rate)
+	if err != nil {
+		c.Logger().Warn(err.Error())
+		return mappers.MapAppErrorToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, mappers.MapUserToGetUserResponse(user))
+}
+
+func GetUserClaims(c echo.Context) *interactor.AuthClaims {
+	return c.Get("user").(*jwt.Token).Claims.(*interactor.AuthClaims)
 }
 
 func saveAuthcookie(c echo.Context, token string, duration int) {

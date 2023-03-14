@@ -27,3 +27,7 @@ type UpdateOwnRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 }
+
+type RateRequest struct {
+	Rate bool `json:"rate"`
+}

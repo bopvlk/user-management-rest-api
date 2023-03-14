@@ -11,11 +11,7 @@ import (
 
 func AdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		claims, err := controller.GetUserClaims(c)
-		if err != nil {
-			c.Logger().Error(err.Error())
-			return mappers.MapAppErrorToHTTPError(err)
-		}
+		claims := controller.GetUserClaims(c)
 
 		switch {
 		case claims.User.Role == "user":
@@ -33,11 +29,7 @@ func AdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 func ModeratorRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		claims, err := controller.GetUserClaims(c)
-		if err != nil {
-			c.Logger().Error(err.Error())
-			return mappers.MapAppErrorToHTTPError(err)
-		}
+		claims := controller.GetUserClaims(c)
 
 		switch {
 		case claims.User.Role == "user":

@@ -20,6 +20,7 @@ type UserRepository interface {
 	DeleteOwnUser(ctx context.Context, id int) error
 	UpdateUserByID(ctx context.Context, id int, user *models.User) (*models.User, error)
 	UpdateOwnUser(ctx context.Context, id int, user *models.User) (*models.User, error)
+	RateUser(ctx context.Context, username string, rate bool) (*models.User, error)
 }
 
 type userRepository struct {
@@ -107,5 +108,24 @@ func (ur *userRepository) UpdateOwnUser(ctx context.Context, id int, user *model
 		return nil, tx.Error
 	}
 
+	return user, nil
+}
+
+func (ur *userRepository) RateUser(ctx context.Context, username string, rate bool) (*models.User, error) {
+	user := new(models.User)
+	err := ur.db.WithContext(ctx).Where("user_name = ?", username).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if rate {
+		user.Rating++
+	} else {
+		user.Rating--
+	}
+
+	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Updates(&user).Error; err != nil {
+		return user, err
+	}
 	return user, nil
 }

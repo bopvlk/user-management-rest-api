@@ -14,6 +14,7 @@ func MapUserToUserResponse(u *models.User) *requests.UserResponse {
 		ID:        u.ID,
 		UserName:  u.UserName,
 		Role:      u.Role,
+		Rating:    u.Rating,
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
 		CreatedAt: u.CreatedAt,
@@ -89,7 +90,7 @@ func MapPaginationAndUsersToGetUsersResponse(users []*models.User, pagination *m
 func MapUserToUpdateResponse(u *models.User) *requests.UpdateUserResponce {
 	return &requests.UpdateUserResponce{
 		Message: fmt.Sprintf("There is updated user with id: %d", u.ID),
-		UserResponse: requests.UserResponse{
+		UserResponse: &requests.UserResponse{
 			ID:        u.ID,
 			UserName:  u.UserName,
 			Role:      u.Role,

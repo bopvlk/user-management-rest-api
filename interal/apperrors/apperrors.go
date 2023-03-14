@@ -106,6 +106,18 @@ var (
 		Code:     "UPDATE_ERR",
 		HTTPCode: http.StatusInternalServerError,
 	}
+
+	CanNotRateYorself = AppError{
+		Message:  "U can't rate yourself",
+		Code:     "RATE_YORSELF_ERR",
+		HTTPCode: http.StatusForbidden,
+	}
+
+	ProblemWithRate = AppError{
+		Message:  "Some problem with rate ",
+		Code:     "RATE_ERR",
+		HTTPCode: http.StatusBadRequest,
+	}
 )
 
 func (appError *AppError) Error() string {

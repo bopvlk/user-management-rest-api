@@ -31,6 +31,7 @@ func TestSignUpHandler(t *testing.T) {
 
 	inputUser := getTestUser()
 	inputUser.ID = 0
+	inputUser.Rating = 0
 	inputUser.Password = hashingUserFunc(inputUser.Password)
 
 	testTable := []struct {
@@ -652,7 +653,7 @@ func TestUpdateOwnerProfileHandler(t *testing.T) {
 
 	inputUser := getTestUser()
 	inputUser.ID = 0
-
+	inputUser.Rating = 0
 	testTable := []struct {
 		scenario string
 
@@ -714,6 +715,96 @@ func TestUpdateOwnerProfileHandler(t *testing.T) {
 	}
 }
 
+func TestRateHandler(t *testing.T) {
+
+	expectedUser := getTestUser()
+	expectedUser.UserName = "username"
+
+	testTable := []struct {
+		scenario string
+
+		expectedUpdateRequest string
+		expectedUser          *models.User
+		expectedRateUser      string
+		expectedRate          bool
+		httpCode              int
+		expectedError         error
+	}{
+		{
+			"successfully rate profile",
+			`{"rate": true}`,
+			expectedUser,
+			expectedUser.UserName,
+			true,
+			http.StatusOK,
+			nil,
+		},
+
+		{
+			"wrong bind params",
+			`{"rate": ", "last_name": "Hall", "passwordy12difficult()Password"}`,
+			expectedUser,
+			expectedUser.UserName,
+			true,
+			http.StatusBadRequest,
+			&apperrors.CanNotBindErr,
+		},
+		{
+			"can not rate himself",
+			`{"rate": true}`,
+			expectedUser,
+			"JohnHall",
+			true,
+			http.StatusForbidden,
+			&apperrors.CanNotRateYorself,
+		},
+		{
+			"missing particular user",
+			`{"rate": true}`,
+			expectedUser,
+			"fedir",
+			true,
+			http.StatusBadRequest,
+			&apperrors.UserNotFoundErr,
+		},
+	}
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	userRepoMock := mocks.NewMockUserRepository(ctrl)
+	uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
+	uController := NewUserController(uInteractor)
+
+	for _, tc := range testTable {
+		t.Run(tc.scenario, func(t *testing.T) {
+			e := echo.New()
+
+			req := httptest.NewRequest(http.MethodPut, "/user/:username", strings.NewReader(tc.expectedUpdateRequest))
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetParamNames("username")
+
+			c.SetParamValues(tc.expectedRateUser)
+			c.Set("user", tokenGenerator())
+
+			userRepoMock.EXPECT().RateUser(ctx, tc.expectedRateUser, tc.expectedRate).Return(tc.expectedUser, tc.expectedError).AnyTimes()
+
+			err := uController.RateHandler(c)
+
+			if err != nil {
+				apperrors.Is(err, tc.expectedError.(*apperrors.AppError))
+				assert.Equal(t, tc.httpCode, err.(*echo.HTTPError).Code)
+				return
+			}
+			assert.Equal(t, tc.httpCode, rec.Code)
+
+		})
+	}
+}
+
 func hashingUserFunc(password string) string {
 	pwd := sha1.New()
 	pwd.Write([]byte(password))
@@ -727,6 +818,7 @@ func getTestUser() *models.User {
 		ID:        124,
 		UserName:  "JohnHall",
 		Role:      "admin",
+		Rating:    10,
 		FirstName: "John",
 		LastName:  "Hall",
 		Password:  "very12difficult()Password",
