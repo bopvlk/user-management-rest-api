@@ -1,2 +1,3 @@
 config/config.env
 build/package/config.env
+.vscode

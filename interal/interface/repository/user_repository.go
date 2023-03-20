@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 
+	"git.foxminded.com.ua/3_REST_API/interal/apperrors"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
 	"gorm.io/gorm"
 )
@@ -20,7 +22,7 @@ type UserRepository interface {
 	DeleteOwnUser(ctx context.Context, id int) error
 	UpdateUserByID(ctx context.Context, id int, user *models.User) (*models.User, error)
 	UpdateOwnUser(ctx context.Context, id int, user *models.User) (*models.User, error)
-	RateUser(ctx context.Context, username string, rate bool) (*models.User, error)
+	RateUserByUsername(ctx context.Context, myID, username string, isRatedUp bool) (*models.User, error)
 }
 
 type userRepository struct {
@@ -31,11 +33,18 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{db}
 }
 
+func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
+	if err := ur.db.WithContext(ctx).Create(&user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func (ur *userRepository) FindUsers(ctx context.Context, pagination *models.Pagination) (*models.Pagination, []*models.User, error) {
 
 	offset := (pagination.Page - 1) * pagination.Limit
 	users := []*models.User{}
-	if err := ur.db.WithContext(ctx).Limit(pagination.Limit).Offset(offset).Order(pagination.Sort).Find(&users).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Limit(pagination.Limit).Offset(offset).Order(pagination.Sort).Preload("Rating").Find(&users).Error; err != nil {
 		return nil, nil, err
 	}
 
@@ -49,7 +58,7 @@ func (ur *userRepository) FindUsers(ctx context.Context, pagination *models.Pagi
 
 func (ur *userRepository) FindOneUserByID(ctx context.Context, id uint) (*models.User, error) {
 	user := models.User{}
-	if err := ur.db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Where("id = ?", id).Preload("Rating").First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -57,17 +66,10 @@ func (ur *userRepository) FindOneUserByID(ctx context.Context, id uint) (*models
 
 func (ur *userRepository) FindOneUserByUserNameAndPassword(ctx context.Context, username, password string) (*models.User, error) {
 	user := models.User{}
-	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Where("password = ?", password).First(&user).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Where("password = ?", password).Preload("Rating").First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
-}
-
-func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
-	if err := ur.db.WithContext(ctx).Create(&user).Error; err != nil {
-		return nil, err
-	}
-	return user, nil
 }
 
 func (ur *userRepository) DeleteUserByID(ctx context.Context, id int) error {
@@ -111,21 +113,31 @@ func (ur *userRepository) UpdateOwnUser(ctx context.Context, id int, user *model
 	return user, nil
 }
 
-func (ur *userRepository) RateUser(ctx context.Context, username string, rate bool) (*models.User, error) {
-	user := new(models.User)
-	err := ur.db.WithContext(ctx).Where("user_name = ?", username).First(&user).Error
+func (ur *userRepository) RateUserByUsername(ctx context.Context, myID, username string, isRatedUp bool) (*models.User, error) {
+	user := &models.User{}
+
+	err := ur.db.WithContext(ctx).Where("user_name = ?", username).Preload("Rating").First(&user).Error
 	if err != nil {
-		return nil, err
+		return nil, apperrors.UserNotFoundErr.AppendMessage(err)
+	}
+	usersWhoRated := strings.Split(user.Rating.WhoRated, " ")
+
+	for _, u := range usersWhoRated {
+		if u == myID {
+			return nil, &apperrors.CanNotRateAgain
+		}
 	}
 
-	if rate {
-		user.Rating++
+	user.Rating.WhoRated = user.Rating.WhoRated + myID + " "
+
+	if isRatedUp {
+		user.Rating.Rating++
 	} else {
-		user.Rating--
+		user.Rating.Rating--
 	}
 
 	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Updates(&user).Error; err != nil {
-		return user, err
+		return user, apperrors.ProblemWithRate.AppendMessage(err)
 	}
 	return user, nil
 }

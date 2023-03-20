@@ -26,7 +26,7 @@ type UserController interface {
 	DeleteOwnerProfileHandler(c echo.Context) error
 	UpdateUserHandler(c echo.Context) error
 	UpdateOwnerProfileHandler(c echo.Context) error
-	RateHandler(c echo.Context) error
+	RateUserHandler(c echo.Context) error
 }
 
 func NewUserController(us interactor.UserInteractor) UserController {
@@ -94,7 +94,7 @@ func (uC *userController) GetOneUserHandler(c echo.Context) error {
 }
 
 func (uC *userController) GetUsersHandler(c echo.Context) error {
-	claims := GetUserClaims(c)
+	claims := FetchUserClaim(c)
 
 	name := claims.User.UserName
 
@@ -137,7 +137,7 @@ func (uC *userController) DeleteUserHandler(c echo.Context) error {
 }
 
 func (uC *userController) DeleteOwnerProfileHandler(c echo.Context) error {
-	claims := GetUserClaims(c)
+	claims := FetchUserClaim(c)
 
 	id := int(claims.User.ID)
 
@@ -174,7 +174,7 @@ func (uC *userController) UpdateUserHandler(c echo.Context) error {
 }
 
 func (uC *userController) UpdateOwnerProfileHandler(c echo.Context) error {
-	claims := GetUserClaims(c)
+	claims := FetchUserClaim(c)
 
 	id := int(claims.User.ID)
 
@@ -194,9 +194,10 @@ func (uC *userController) UpdateOwnerProfileHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapUserToUpdateResponse(user))
 }
 
-func (uC *userController) RateHandler(c echo.Context) error {
+func (uC *userController) RateUserHandler(c echo.Context) error {
 	username := c.Param("username")
-	if username == GetUserClaims(c).User.UserName {
+	user := FetchUserClaim(c).User
+	if username == user.UserName {
 		err := &apperrors.CanNotRateYorself
 		c.Logger().Error(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -209,7 +210,7 @@ func (uC *userController) RateHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	user, err := uC.userInteractor.RateSign(c.Request().Context(), username, rateRequest.Rate)
+	user, err := uC.userInteractor.RateUser(c.Request().Context(), strconv.Itoa(int(user.ID)), username, rateRequest.Rate)
 	if err != nil {
 		c.Logger().Warn(err.Error())
 		return mappers.MapAppErrorToHTTPError(err)
@@ -218,7 +219,7 @@ func (uC *userController) RateHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, mappers.MapUserToGetUserResponse(user))
 }
 
-func GetUserClaims(c echo.Context) *interactor.AuthClaims {
+func FetchUserClaim(c echo.Context) *interactor.AuthClaims {
 	return c.Get("user").(*jwt.Token).Claims.(*interactor.AuthClaims)
 }
 

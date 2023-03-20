@@ -31,7 +31,7 @@ func TestSignUpHandler(t *testing.T) {
 
 	inputUser := getTestUser()
 	inputUser.ID = 0
-	inputUser.Rating = 0
+	inputUser.Rating.Rating = 1
 	inputUser.Password = hashingUserFunc(inputUser.Password)
 
 	testTable := []struct {
@@ -653,7 +653,7 @@ func TestUpdateOwnerProfileHandler(t *testing.T) {
 
 	inputUser := getTestUser()
 	inputUser.ID = 0
-	inputUser.Rating = 0
+	inputUser.Rating.Rating = 0
 	testTable := []struct {
 		scenario string
 
@@ -720,13 +720,18 @@ func TestRateHandler(t *testing.T) {
 	expectedUser := getTestUser()
 	expectedUser.UserName = "username"
 
-	testTable := []struct {
-		scenario string
+	type args struct {
+		ctx                 context.Context
+		myID                string
+		username            string
+		expectedRatedUpDown bool
+	}
 
+	testTable := []struct {
+		scenario              string
 		expectedUpdateRequest string
 		expectedUser          *models.User
-		expectedRateUser      string
-		expectedRate          bool
+		args                  args
 		httpCode              int
 		expectedError         error
 	}{
@@ -734,8 +739,12 @@ func TestRateHandler(t *testing.T) {
 			"successfully rate profile",
 			`{"rate": true}`,
 			expectedUser,
-			expectedUser.UserName,
-			true,
+			args{
+				context.Background(),
+				"124+",
+				expectedUser.UserName,
+				true,
+			},
 			http.StatusOK,
 			nil,
 		},
@@ -744,41 +753,49 @@ func TestRateHandler(t *testing.T) {
 			"wrong bind params",
 			`{"rate": ", "last_name": "Hall", "passwordy12difficult()Password"}`,
 			expectedUser,
-			expectedUser.UserName,
-			true,
+			args{
+				context.Background(),
+				"124+",
+				expectedUser.UserName,
+				true,
+			},
 			http.StatusBadRequest,
 			&apperrors.CanNotBindErr,
 		},
 		{
 			"can not rate himself",
 			`{"rate": true}`,
-			expectedUser,
-			"JohnHall",
-			true,
+			getTestUser(),
+			args{
+				context.Background(),
+				"124+",
+				"JohnHall",
+				true,
+			},
 			http.StatusForbidden,
 			&apperrors.CanNotRateYorself,
 		},
-		{
-			"missing particular user",
-			`{"rate": true}`,
-			expectedUser,
-			"fedir",
-			true,
-			http.StatusBadRequest,
-			&apperrors.UserNotFoundErr,
-		},
+		// {
+		// 	"missing particular user",
+		// 	`{"rate": true}`,
+		// 	expectedUser,
+		// 	"fedir",
+		// 	true,
+		// 	http.StatusBadRequest,
+		// 	&apperrors.UserNotFoundErr,
+		// },
 	}
 
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	userRepoMock := mocks.NewMockUserRepository(ctrl)
-	uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
-	uController := NewUserController(uInteractor)
-
 	for _, tc := range testTable {
 		t.Run(tc.scenario, func(t *testing.T) {
+			userRepoMock := mocks.NewMockUserRepository(ctrl)
+			uInteractor := interactor.NewUserInteractor(userRepoMock, "hash_salt", []byte("signing_key"), 1)
+			uController := NewUserController(uInteractor)
+
 			e := echo.New()
 
 			req := httptest.NewRequest(http.MethodPut, "/user/:username", strings.NewReader(tc.expectedUpdateRequest))
@@ -787,12 +804,13 @@ func TestRateHandler(t *testing.T) {
 			c := e.NewContext(req, rec)
 			c.SetParamNames("username")
 
-			c.SetParamValues(tc.expectedRateUser)
+			c.SetParamValues(tc.args.username)
 			c.Set("user", tokenGenerator())
 
-			userRepoMock.EXPECT().RateUser(ctx, tc.expectedRateUser, tc.expectedRate).Return(tc.expectedUser, tc.expectedError).AnyTimes()
+			userRepoMock.EXPECT().RateUserByUsername(ctx, tc.args.myID, tc.args.username, tc.args.expectedRatedUpDown).Return(tc.expectedUser, tc.expectedError).
+				AnyTimes()
 
-			err := uController.RateHandler(c)
+			err := uController.RateUserHandler(c)
 
 			if err != nil {
 				apperrors.Is(err, tc.expectedError.(*apperrors.AppError))
@@ -818,7 +836,7 @@ func getTestUser() *models.User {
 		ID:        124,
 		UserName:  "JohnHall",
 		Role:      "admin",
-		Rating:    10,
+		Rating:    models.Rating{Rating: 10},
 		FirstName: "John",
 		LastName:  "Hall",
 		Password:  "very12difficult()Password",

@@ -124,19 +124,19 @@ func (mr *MockUserRepositoryMockRecorder) FindUsers(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindUsers", reflect.TypeOf((*MockUserRepository)(nil).FindUsers), arg0, arg1)
 }
 
-// RateUser mocks base method.
-func (m *MockUserRepository) RateUser(arg0 context.Context, arg1 string, arg2 bool) (*models.User, error) {
+// RateUserByUsername mocks base method.
+func (m *MockUserRepository) RateUserByUsername(arg0 context.Context, arg1, arg2 string, arg3 bool) (*models.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RateUser", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "RateUserByUsername", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*models.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// RateUser indicates an expected call of RateUser.
-func (mr *MockUserRepositoryMockRecorder) RateUser(arg0, arg1, arg2 interface{}) *gomock.Call {
+// RateUserByUsername indicates an expected call of RateUserByUsername.
+func (mr *MockUserRepositoryMockRecorder) RateUserByUsername(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RateUser", reflect.TypeOf((*MockUserRepository)(nil).RateUser), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RateUserByUsername", reflect.TypeOf((*MockUserRepository)(nil).RateUserByUsername), arg0, arg1, arg2, arg3)
 }
 
 // UpdateOwnUser mocks base method.

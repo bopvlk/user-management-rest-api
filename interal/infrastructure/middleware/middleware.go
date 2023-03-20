@@ -11,7 +11,7 @@ import (
 
 func AdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		claims := controller.GetUserClaims(c)
+		claims := controller.FetchUserClaim(c)
 
 		switch {
 		case claims.User.Role == "user":
@@ -29,7 +29,7 @@ func AdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 func ModeratorRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		claims := controller.GetUserClaims(c)
+		claims := controller.FetchUserClaim(c)
 
 		switch {
 		case claims.User.Role == "user":

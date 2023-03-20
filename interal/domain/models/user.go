@@ -7,9 +7,9 @@ import (
 )
 
 type User struct {
-	ID        uint           `json:"id" gorm:"primary_key"`
+	ID        uint           `json:"id" gorm:"primary_key,"`
 	Role      string         `json:"role"`
-	Rating    int            `json:"rating"`
+	Rating    Rating         `json:"user_rating"`
 	UserName  string         `json:"user_name" gorm:"unique"`
 	FirstName string         `json:"first_name"`
 	LastName  string         `json:"last_name"`
@@ -17,4 +17,10 @@ type User struct {
 	CreatedAt *time.Time     `json:"created_at"`
 	UpdatedAt *time.Time     `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+}
+
+type Rating struct {
+	UserID   uint   `json:"rating_id"`
+	Rating   int    `json:"rating"`
+	WhoRated string `json:"who_rated"`
 }

@@ -114,9 +114,15 @@ var (
 	}
 
 	ProblemWithRate = AppError{
-		Message:  "Some problem with rate ",
+		Message:  "Some problem with rate",
 		Code:     "RATE_ERR",
 		HTTPCode: http.StatusBadRequest,
+	}
+
+	CanNotRateAgain = AppError{
+		Message:  "You can not rate this user again",
+		Code:     "RATE_USER_AGAIN_ERR",
+		HTTPCode: http.StatusForbidden,
 	}
 )
 

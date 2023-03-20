@@ -20,8 +20,8 @@ func NewRouter(e *echo.Echo, config *config.Config, appController *controller.Ap
 	e.Validator = &v.CustomValidator{Validator: validator.New()}
 
 	apiGroup := e.Group("/api/v1")
-	apiGroup.POST("/sing-up", func(c echo.Context) error { return appController.SignUpHandler(c) })
-	apiGroup.POST("/sing-in", func(c echo.Context) error { return appController.SignInHandler(c) })
+	apiGroup.POST("/sing-up", appController.SignUpHandler)
+	apiGroup.POST("/sing-in", appController.SignInHandler)
 
 	restrictedGroup := apiGroup.Group("/restricted")
 	restrictedGroup.Use(echojwt.WithConfig(echojwt.Config{
@@ -32,13 +32,13 @@ func NewRouter(e *echo.Echo, config *config.Config, appController *controller.Ap
 		TokenLookup: "cookie:Authorization",
 	}))
 
-	restrictedGroup.GET("/user/:id", func(c echo.Context) error { return appController.GetOneUserHandler(c) })
-	restrictedGroup.GET("/users", func(c echo.Context) error { return appController.GetUsersHandler(c) }, appMiddleware.ModeratorRoleMiddleware)
-	restrictedGroup.DELETE("/user/:id", func(c echo.Context) error { return appController.DeleteUserHandler(c) }, appMiddleware.AdminRoleMiddleware)
-	restrictedGroup.PUT("/user/:id", func(c echo.Context) error { return appController.UpdateUserHandler(c) }, appMiddleware.AdminRoleMiddleware)
-	restrictedGroup.DELETE("/user/profile", func(c echo.Context) error { return appController.DeleteOwnerProfileHandler(c) })
-	restrictedGroup.PUT("/user/profile", func(c echo.Context) error { return appController.UpdateOwnerProfileHandler(c) })
-	restrictedGroup.POST("/user/:username", func(c echo.Context) error { return appController.RateHandler(c) })
+	restrictedGroup.GET("/user/:id", appController.GetOneUserHandler)
+	restrictedGroup.GET("/users", appController.GetUsersHandler, appMiddleware.ModeratorRoleMiddleware)
+	restrictedGroup.DELETE("/user/:id", appController.DeleteUserHandler, appMiddleware.AdminRoleMiddleware)
+	restrictedGroup.PUT("/user/:id", appController.UpdateUserHandler, appMiddleware.AdminRoleMiddleware)
+	restrictedGroup.DELETE("/user/profile", appController.DeleteOwnerProfileHandler)
+	restrictedGroup.PUT("/user/profile", appController.UpdateOwnerProfileHandler)
+	restrictedGroup.PATCH("/user/:username", appController.RateUserHandler)
 
 	return e
 }
