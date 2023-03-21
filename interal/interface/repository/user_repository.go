@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
-	"strings"
+	"time"
 
 	"git.foxminded.com.ua/3_REST_API/interal/apperrors"
 	"git.foxminded.com.ua/3_REST_API/interal/domain/models"
@@ -22,7 +22,7 @@ type UserRepository interface {
 	DeleteOwnUser(ctx context.Context, id int) error
 	UpdateUserByID(ctx context.Context, id int, user *models.User) (*models.User, error)
 	UpdateOwnUser(ctx context.Context, id int, user *models.User) (*models.User, error)
-	RateUserByUsername(ctx context.Context, myID, username string, isRatedUp bool) (*models.User, error)
+	RateUserByUsername(ctx context.Context, userWhoRateID uint, username, rate string) (*models.User, error)
 }
 
 type userRepository struct {
@@ -44,7 +44,7 @@ func (ur *userRepository) FindUsers(ctx context.Context, pagination *models.Pagi
 
 	offset := (pagination.Page - 1) * pagination.Limit
 	users := []*models.User{}
-	if err := ur.db.WithContext(ctx).Limit(pagination.Limit).Offset(offset).Order(pagination.Sort).Preload("Rating").Find(&users).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Limit(pagination.Limit).Offset(offset).Order(pagination.Sort).Find(&users).Error; err != nil {
 		return nil, nil, err
 	}
 
@@ -58,7 +58,7 @@ func (ur *userRepository) FindUsers(ctx context.Context, pagination *models.Pagi
 
 func (ur *userRepository) FindOneUserByID(ctx context.Context, id uint) (*models.User, error) {
 	user := models.User{}
-	if err := ur.db.WithContext(ctx).Where("id = ?", id).Preload("Rating").First(&user).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -66,7 +66,7 @@ func (ur *userRepository) FindOneUserByID(ctx context.Context, id uint) (*models
 
 func (ur *userRepository) FindOneUserByUserNameAndPassword(ctx context.Context, username, password string) (*models.User, error) {
 	user := models.User{}
-	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Where("password = ?", password).Preload("Rating").First(&user).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Where("password = ?", password).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -113,31 +113,74 @@ func (ur *userRepository) UpdateOwnUser(ctx context.Context, id int, user *model
 	return user, nil
 }
 
-func (ur *userRepository) RateUserByUsername(ctx context.Context, myID, username string, isRatedUp bool) (*models.User, error) {
+func (ur *userRepository) RateUserByUsername(ctx context.Context, userWhoRateID uint, username, rate string) (*models.User, error) {
 	user := &models.User{}
 
-	err := ur.db.WithContext(ctx).Where("user_name = ?", username).Preload("Rating").First(&user).Error
-	if err != nil {
+	if err := ur.db.WithContext(ctx).Where("id = ?", int(userWhoRateID)).First(&user).Error; err != nil {
 		return nil, apperrors.UserNotFoundErr.AppendMessage(err)
 	}
-	usersWhoRated := strings.Split(user.Rating.WhoRated, " ")
 
-	for _, u := range usersWhoRated {
-		if u == myID {
-			return nil, &apperrors.CanNotRateAgain
+	now := time.Now()
+	if user.WhenIGaveRating != nil && user.WhenIGaveRating.Add(time.Hour*1).After(now) {
+
+		return nil, &apperrors.ProblemWithGivingRating
+	}
+
+	user = &models.User{}
+	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Preload("WhoRateds").First(&user).Error; err != nil {
+		return nil, apperrors.UserNotFoundErr.AppendMessage(err)
+	}
+
+	var oldRate bool
+	for _, u := range user.WhoRateds {
+		if u.WhoRatedID == userWhoRateID {
+			oldRate = true
+			switch u.Rate {
+			case rate:
+				return nil, &apperrors.CanNotRateAgain
+			case "up":
+				if rate == "rm" {
+					user.Rating--
+				} else {
+					user.Rating = user.Rating - 2
+				}
+			case "rm":
+				if rate == "up" {
+					user.Rating++
+				} else {
+					user.Rating--
+				}
+			case "down":
+				if rate == "up" {
+					user.Rating = user.Rating + 2
+				} else {
+					user.Rating++
+				}
+			}
+			u.Rate = rate
+
+			if err := ur.db.WithContext(ctx).Where("id = ?", u.ID).Updates(&u).Error; err != nil {
+				return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
+			}
+		}
+	}
+	if !oldRate {
+		if rate == "up" {
+			user.Rating++
+		} else if rate == "down" {
+			user.Rating--
+		}
+		if err := ur.db.WithContext(ctx).Model(&user).Association("WhoRateds").Append(&models.WhoRated{WhoRatedID: userWhoRateID, Rate: rate}); err != nil {
+			return nil, apperrors.CanNotCreateWhoRatedErr.AppendMessage(err)
 		}
 	}
 
-	user.Rating.WhoRated = user.Rating.WhoRated + myID + " "
-
-	if isRatedUp {
-		user.Rating.Rating++
-	} else {
-		user.Rating.Rating--
+	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).UpdateColumns(&models.User{Rating: user.Rating}).Error; err != nil {
+		return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
 	}
 
-	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Updates(&user).Error; err != nil {
-		return user, apperrors.ProblemWithRate.AppendMessage(err)
+	if err := ur.db.WithContext(ctx).Where("id = ?", int(userWhoRateID)).UpdateColumns(&models.User{WhenIGaveRating: &now}).Error; err != nil {
+		return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
 	}
 	return user, nil
 }

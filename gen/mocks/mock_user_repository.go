@@ -125,7 +125,7 @@ func (mr *MockUserRepositoryMockRecorder) FindUsers(arg0, arg1 interface{}) *gom
 }
 
 // RateUserByUsername mocks base method.
-func (m *MockUserRepository) RateUserByUsername(arg0 context.Context, arg1, arg2 string, arg3 bool) (*models.User, error) {
+func (m *MockUserRepository) RateUserByUsername(arg0 context.Context, arg1 uint, arg2, arg3 string) (*models.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RateUserByUsername", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*models.User)

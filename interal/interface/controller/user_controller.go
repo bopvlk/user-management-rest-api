@@ -210,13 +210,17 @@ func (uC *userController) RateUserHandler(c echo.Context) error {
 		return mappers.MapAppErrorToHTTPError(appErr)
 	}
 
-	user, err := uC.userInteractor.RateUser(c.Request().Context(), strconv.Itoa(int(user.ID)), username, rateRequest.Rate)
-	if err != nil {
-		c.Logger().Warn(err.Error())
-		return mappers.MapAppErrorToHTTPError(err)
+	if rateRequest.Rate == "up" || rateRequest.Rate == "down" || rateRequest.Rate == "rm" {
+		user, err := uC.userInteractor.RateUser(c.Request().Context(), user.ID, username, rateRequest.Rate)
+		if err != nil {
+			c.Logger().Warn(err.Error())
+			return mappers.MapAppErrorToHTTPError(err)
+		}
+		return c.JSON(http.StatusOK, mappers.MapUserToGetUserResponse(user))
 	}
-
-	return c.JSON(http.StatusOK, mappers.MapUserToGetUserResponse(user))
+	err := &apperrors.WrongTextInRateRequest
+	c.Logger().Warn(err.Error())
+	return mappers.MapAppErrorToHTTPError(err)
 }
 
 func FetchUserClaim(c echo.Context) *interactor.AuthClaims {

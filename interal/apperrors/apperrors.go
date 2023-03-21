@@ -113,16 +113,28 @@ var (
 		HTTPCode: http.StatusForbidden,
 	}
 
-	ProblemWithRate = AppError{
-		Message:  "Some problem with rate",
+	ProblemWithGivingRating = AppError{
+		Message:  "Some problem with rate, probably you rate too often. Please try again later",
 		Code:     "RATE_ERR",
-		HTTPCode: http.StatusBadRequest,
+		HTTPCode: http.StatusForbidden,
 	}
 
 	CanNotRateAgain = AppError{
 		Message:  "You can not rate this user again",
 		Code:     "RATE_USER_AGAIN_ERR",
 		HTTPCode: http.StatusForbidden,
+	}
+
+	WrongTextInRateRequest = AppError{
+		Message:  "Wrong the field in RateRequest. You must fill the field like \"up\", \"rm\" or \"down\"",
+		Code:     "WRONG_TEXT_IN_RATE_REQUEST",
+		HTTPCode: http.StatusBadRequest,
+	}
+
+	CanNotCreateWhoRatedErr = AppError{
+		Message:  "can't create WhoRated",
+		Code:     "CAN_NOT_CREATE_TABLE_WHORATED_ERR",
+		HTTPCode: http.StatusInternalServerError,
 	}
 )
 

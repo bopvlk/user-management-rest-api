@@ -14,7 +14,7 @@ func MapUserToUserResponse(u *models.User) *requests.UserResponse {
 		ID:        u.ID,
 		UserName:  u.UserName,
 		Role:      u.Role,
-		Rating:    u.Rating.Rating,
+		Rating:    u.Rating,
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
 		CreatedAt: u.CreatedAt,
@@ -25,11 +25,9 @@ func MapUserToUserResponse(u *models.User) *requests.UserResponse {
 
 func MapSignUpRequestToUser(signUp *requests.SignUpRequest) *models.User {
 	return &models.User{
-		UserName: signUp.UserName,
-		Role:     signUp.Role,
-		Rating: models.Rating{
-			Rating: 1,
-		},
+		UserName:  signUp.UserName,
+		Role:      signUp.Role,
+		Rating:    1,
 		FirstName: signUp.FirstName,
 		LastName:  signUp.LastName,
 		Password:  signUp.Password,

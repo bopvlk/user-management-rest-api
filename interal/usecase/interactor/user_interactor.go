@@ -22,7 +22,7 @@ type UserInteractor interface {
 	DeleteOwnSignIn(ctx context.Context, id int) error
 	UpdateSignersByID(ctx context.Context, id int, user *models.User) (*models.User, error)
 	UpdateOwnSignIn(ctx context.Context, id int, user *models.User) (*models.User, error)
-	RateUser(ctx context.Context, myID, username string, isRatedUp bool) (*models.User, error)
+	RateUser(ctx context.Context, myID uint, username, rate string) (*models.User, error)
 }
 
 type AuthClaims struct {
@@ -142,14 +142,8 @@ func (uI *userInteractor) UpdateOwnSignIn(ctx context.Context, id int, user *mod
 	return user, nil
 }
 
-func (uI *userInteractor) RateUser(ctx context.Context, myID, username string, isRatedUp bool) (*models.User, error) {
-	if isRatedUp {
-		myID = myID + "+"
-	} else {
-		myID = myID + "-"
-	}
-
-	user, err := uI.userRepo.RateUserByUsername(ctx, myID, username, isRatedUp)
+func (uI *userInteractor) RateUser(ctx context.Context, myID uint, username, rate string) (*models.User, error) {
+	user, err := uI.userRepo.RateUserByUsername(ctx, myID, username, rate)
 	if err != nil {
 		return nil, err
 	}

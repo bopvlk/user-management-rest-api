@@ -29,5 +29,5 @@ type UpdateOwnRequest struct {
 }
 
 type RateRequest struct {
-	Rate bool `json:"rate"`
+	Rate string `json:"rate"`
 }

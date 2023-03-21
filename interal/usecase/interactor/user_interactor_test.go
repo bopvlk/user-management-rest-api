@@ -661,10 +661,10 @@ func TestRateSigner(t *testing.T) {
 	now := time.Now()
 
 	type args struct {
-		ctx       context.Context
-		id        string
-		username  string
-		isRatedUp bool
+		ctx            context.Context
+		userWhoRatedID uint
+		username       string
+		rate           string
 	}
 
 	tests := []struct {
@@ -677,9 +677,9 @@ func TestRateSigner(t *testing.T) {
 		{
 			"successfully rate up the user",
 			args{context.Background(),
-				"121",
+				121,
 				"JohnHall",
-				true},
+				"up"},
 			"+",
 			&models.User{
 				ID:        121,
@@ -693,31 +693,13 @@ func TestRateSigner(t *testing.T) {
 			},
 			nil,
 		},
+
 		{
-			"successfully rate down the user",
+			"can not rate very often",
 			args{context.Background(),
-				"121",
+				121,
 				"JohnHall",
-				false},
-			"-",
-			&models.User{
-				ID:        121,
-				UserName:  "JohnHall",
-				Role:      "admin",
-				FirstName: "John",
-				LastName:  "Hall",
-				Password:  "1231",
-				CreatedAt: &now,
-				UpdatedAt: &now,
-			},
-			nil,
-		},
-		{
-			"want rate again the user",
-			args{context.Background(),
-				"121",
-				"JohnHall",
-				true},
+				"up"},
 			"+",
 			&models.User{
 				ID:        121,
@@ -729,7 +711,7 @@ func TestRateSigner(t *testing.T) {
 				CreatedAt: &now,
 				UpdatedAt: &now,
 			},
-			&apperrors.CanNotRateAgain,
+			&apperrors.ProblemWithGivingRating,
 		},
 	}
 	ctrl := gomock.NewController(t)
@@ -745,9 +727,9 @@ func TestRateSigner(t *testing.T) {
 				expireDuration: 0,
 			}
 
-			userRepoMock.EXPECT().RateUserByUsername(tt.args.ctx, tt.args.id+tt.upOrDOwn, tt.args.username, tt.args.isRatedUp).Return(tt.want, tt.wantErr)
+			userRepoMock.EXPECT().RateUserByUsername(tt.args.ctx, tt.args.userWhoRatedID, tt.args.username, tt.args.rate).Return(tt.want, tt.wantErr)
 
-			_, err := uInteractor.RateUser(tt.args.ctx, tt.args.id, tt.args.username, tt.args.isRatedUp)
+			_, err := uInteractor.RateUser(tt.args.ctx, tt.args.userWhoRatedID, tt.args.username, tt.args.rate)
 
 			if err != nil {
 

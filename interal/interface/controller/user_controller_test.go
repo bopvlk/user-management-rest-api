@@ -31,7 +31,7 @@ func TestSignUpHandler(t *testing.T) {
 
 	inputUser := getTestUser()
 	inputUser.ID = 0
-	inputUser.Rating.Rating = 1
+	inputUser.Rating = 1
 	inputUser.Password = hashingUserFunc(inputUser.Password)
 
 	testTable := []struct {
@@ -653,7 +653,7 @@ func TestUpdateOwnerProfileHandler(t *testing.T) {
 
 	inputUser := getTestUser()
 	inputUser.ID = 0
-	inputUser.Rating.Rating = 0
+	inputUser.Rating = 0
 	testTable := []struct {
 		scenario string
 
@@ -722,9 +722,9 @@ func TestRateHandler(t *testing.T) {
 
 	type args struct {
 		ctx                 context.Context
-		myID                string
+		myID                uint
 		username            string
-		expectedRatedUpDown bool
+		expectedRatedUpDown string
 	}
 
 	testTable := []struct {
@@ -737,53 +737,52 @@ func TestRateHandler(t *testing.T) {
 	}{
 		{
 			"successfully rate profile",
-			`{"rate": true}`,
+			`{"rate": "up"}`,
 			expectedUser,
 			args{
 				context.Background(),
-				"124+",
+				124,
 				expectedUser.UserName,
-				true,
+				"up",
 			},
 			http.StatusOK,
 			nil,
 		},
-
+		{
+			"rate himself",
+			`{"rate": true}`,
+			getTestUser(),
+			args{
+				context.Background(),
+				124,
+				"JohnHall",
+				"up",
+			},
+			http.StatusForbidden,
+			&apperrors.CanNotRateYorself,
+		},
 		{
 			"wrong bind params",
 			`{"rate": ", "last_name": "Hall", "passwordy12difficult()Password"}`,
 			expectedUser,
 			args{
 				context.Background(),
-				"124+",
+				0,
 				expectedUser.UserName,
-				true,
+				"",
 			},
 			http.StatusBadRequest,
 			&apperrors.CanNotBindErr,
 		},
+
 		{
-			"can not rate himself",
-			`{"rate": true}`,
-			getTestUser(),
-			args{
-				context.Background(),
-				"124+",
-				"JohnHall",
-				true,
-			},
-			http.StatusForbidden,
-			&apperrors.CanNotRateYorself,
+			"bad rate word",
+			`{"rate": "true"}`,
+			expectedUser,
+			args{},
+			http.StatusBadRequest,
+			&apperrors.WrongTextInRateRequest,
 		},
-		// {
-		// 	"missing particular user",
-		// 	`{"rate": true}`,
-		// 	expectedUser,
-		// 	"fedir",
-		// 	true,
-		// 	http.StatusBadRequest,
-		// 	&apperrors.UserNotFoundErr,
-		// },
 	}
 
 	ctx := context.Background()
@@ -836,7 +835,7 @@ func getTestUser() *models.User {
 		ID:        124,
 		UserName:  "JohnHall",
 		Role:      "admin",
-		Rating:    models.Rating{Rating: 10},
+		Rating:    10,
 		FirstName: "John",
 		LastName:  "Hall",
 		Password:  "very12difficult()Password",
