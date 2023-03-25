@@ -113,65 +113,26 @@ func (ur *userRepository) UpdateOwnUser(ctx context.Context, id int, user *model
 	return user, nil
 }
 
-func (ur *userRepository) RateUserByUsername(ctx context.Context, userWhoRateID uint, username, rate string) (*models.User, error) {
+func (ur *userRepository) RateUserByUsername(ctx context.Context, rateUserID uint, username, rate string) (*models.User, error) {
 	user := &models.User{}
-
-	if err := ur.db.WithContext(ctx).Where("id = ?", int(userWhoRateID)).First(&user).Error; err != nil {
+	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Preload("RatedByUsers").First(&user).Error; err != nil {
 		return nil, apperrors.UserNotFoundErr.AppendMessage(err)
 	}
 
-	now := time.Now()
-	if user.WhenIGaveRating != nil && user.WhenIGaveRating.Add(time.Hour*1).After(now) {
-
-		return nil, &apperrors.ProblemWithGivingRating
+	existingRateUser, rating, err := determineUserRate(user.Rating, user.RatedByUsers, rateUserID, rate)
+	if err != nil {
+		return nil, err
 	}
+	user.Rating = rating
 
-	user = &models.User{}
-	if err := ur.db.WithContext(ctx).Where("user_name = ?", username).Preload("WhoRateds").First(&user).Error; err != nil {
-		return nil, apperrors.UserNotFoundErr.AppendMessage(err)
-	}
-
-	var oldRate bool
-	for _, u := range user.WhoRateds {
-		if u.WhoRatedID == userWhoRateID {
-			oldRate = true
-			switch u.Rate {
-			case rate:
-				return nil, &apperrors.CanNotRateAgain
-			case "up":
-				if rate == "rm" {
-					user.Rating--
-				} else {
-					user.Rating = user.Rating - 2
-				}
-			case "rm":
-				if rate == "up" {
-					user.Rating++
-				} else {
-					user.Rating--
-				}
-			case "down":
-				if rate == "up" {
-					user.Rating = user.Rating + 2
-				} else {
-					user.Rating++
-				}
-			}
-			u.Rate = rate
-
-			if err := ur.db.WithContext(ctx).Where("id = ?", u.ID).Updates(&u).Error; err != nil {
-				return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
-			}
+	if existingRateUser != nil {
+		existingRateUser.Rate = rate
+		if err := ur.db.WithContext(ctx).Where("id = ?", existingRateUser.ID).Updates(&existingRateUser).Error; err != nil {
+			return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
 		}
-	}
-	if !oldRate {
-		if rate == "up" {
-			user.Rating++
-		} else if rate == "down" {
-			user.Rating--
-		}
-		if err := ur.db.WithContext(ctx).Model(&user).Association("WhoRateds").Append(&models.WhoRated{WhoRatedID: userWhoRateID, Rate: rate}); err != nil {
-			return nil, apperrors.CanNotCreateWhoRatedErr.AppendMessage(err)
+	} else {
+		if err := ur.db.WithContext(ctx).Model(&user).Association("RatedByUsers").Append(&models.RatedByUser{RatedByUserID: rateUserID, Rate: rate}); err != nil {
+			return nil, apperrors.CanNotCreateTableErr.AppendMessage(err)
 		}
 	}
 
@@ -179,8 +140,59 @@ func (ur *userRepository) RateUserByUsername(ctx context.Context, userWhoRateID 
 		return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
 	}
 
-	if err := ur.db.WithContext(ctx).Where("id = ?", int(userWhoRateID)).UpdateColumns(&models.User{WhenIGaveRating: &now}).Error; err != nil {
-		return nil, apperrors.CanNotUpdateErr.AppendMessage(err)
-	}
 	return user, nil
+}
+
+func determineUserRate(userRating int, ratedUsers []models.RatedByUser, ratedUserId uint, rate string) (*models.RatedByUser, int, error) {
+	now := time.Now()
+
+	for _, u := range ratedUsers {
+
+		if u.RatedByUserID != ratedUserId {
+			continue
+		}
+
+		if u.CreatedAt.Add(time.Hour * 1).After(now) {
+			return nil, 0, &apperrors.ProblemWithGivingRating
+		}
+
+		switch u.Rate {
+		case rate:
+			return nil, 0, &apperrors.CanNotRateAgain
+		case "up":
+			if rate == "rm" {
+				userRating--
+				return &u, userRating, nil
+			}
+
+			userRating -= 2
+			return &u, userRating, nil
+		case "rm":
+			if rate == "up" {
+				userRating++
+				return &u, userRating, nil
+			}
+
+			userRating--
+			return &u, userRating, nil
+		case "down":
+			if rate == "up" {
+				userRating += 2
+				return &u, userRating, nil
+			}
+
+			userRating++
+			return &u, userRating, nil
+		default:
+			return nil, 0, &apperrors.UnkownRateErr
+		}
+	}
+
+	if rate == "up" {
+		userRating++
+		return nil, userRating, nil
+	}
+
+	userRating--
+	return nil, userRating, nil
 }

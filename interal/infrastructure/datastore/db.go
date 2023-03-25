@@ -20,7 +20,7 @@ func NewDB(c *config.Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, apperrors.CanNotInitializeDBSessionErr.AppendMessage(err)
 	}
-	db.AutoMigrate(&models.User{}, &models.WhoRated{})
+	db.AutoMigrate(&models.User{}, &models.RatedByUser{})
 
 	return db, nil
 }

@@ -131,10 +131,16 @@ var (
 		HTTPCode: http.StatusBadRequest,
 	}
 
-	CanNotCreateWhoRatedErr = AppError{
-		Message:  "can't create WhoRated",
-		Code:     "CAN_NOT_CREATE_TABLE_WHORATED_ERR",
+	CanNotCreateTableErr = AppError{
+		Message:  "can't create table",
+		Code:     "CAN_NOT_CREATE_TABLE_ERR",
 		HTTPCode: http.StatusInternalServerError,
+	}
+
+	UnkownRateErr = AppError{
+		Message:  "uknown rate",
+		Code:     "UKNOWN_RATE_ERR",
+		HTTPCode: http.StatusBadRequest,
 	}
 )
 
